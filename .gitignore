@@ -1,0 +1,11 @@
+# VS Files
+*.suo
+*.user
+*.opensdf
+*.sdf
+*.psess
+*.vsp
+*.vspx
+
+build/
+*~
