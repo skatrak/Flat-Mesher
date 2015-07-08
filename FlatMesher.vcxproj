@@ -84,7 +84,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\FloorPlan.cpp" />
-    <ClCompile Include="src\Main.cpp" />
+    <ClCompile Include="src\Test.cpp" />
     <ClCompile Include="src\Point2.cpp" />
     <ClCompile Include="src\Point3.cpp" />
   </ItemGroup>
