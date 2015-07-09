@@ -3,6 +3,8 @@
 
 #include <cmath>
 
+#define M_PI 3.14159265358979323846
+
 using namespace flat;
 
 bool FloorPlan::valid() const {
@@ -40,6 +42,50 @@ bool FloorPlan::valid() const {
         return false;
 
   return true;
+}
+
+bool FloorPlan::pointInside(const Point2& p) const {
+  static const double Q_WEIGHTS [] = {
+    0.173927422568727,
+    0.326072577431273,
+    0.326072577431273,
+    0.173927422568727
+  };
+
+  static const double Q_POINTS [] = {
+    0.930568155797026,
+    0.669990521792428,
+    0.330009478207572,
+    0.069431844202974
+  };
+
+  static const int N_POINTS = sizeof Q_POINTS / sizeof Q_POINTS[0];
+
+  size_t n = m_nodes.size();
+
+  double integral = 0.0;
+  for (size_t i = 1; i <= n; ++i) {
+    Point2 y_start = m_nodes[i - 1];
+    Point2 y_end = m_nodes[i % n];
+
+    Point2 segment = y_end - y_start;
+
+    double h = y_start.distance(y_end);
+    Point2 normal = Point2(segment.getY(), -segment.getX()) / h;
+
+    double local_integral = 0.0;
+    for (size_t j = 0; j < N_POINTS; ++j) {
+      Point2 y = y_start + (segment * Q_POINTS[j]);
+      double norm_xy = p.distance(y);
+
+      local_integral += (-1.0 / (2 * M_PI) * Point2::dot(p-y, normal) /
+                         (norm_xy * norm_xy)) * Q_WEIGHTS[j];
+    }
+
+    integral += local_integral * h;
+  }
+
+  return integral > 0.5;
 }
 
 std::ostream& operator<<(std::ostream& os, const FloorPlan& fp) {

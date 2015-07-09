@@ -23,6 +23,7 @@ public:
   void setTriangleSize(double size) { m_triangle_sz = size; }
 
   bool valid() const;
+  bool pointInside(const Point2& p) const;
 
 private:
   std::vector<Point2> m_nodes;

@@ -15,10 +15,12 @@ const char* output_file = "test/test1_gen.flat";
 // Tests
 bool testReadWriteFloorPlan();
 bool testIsValidFloorPlan();
+bool testPointsInside();
 
 int main(int argc, char* argv[]) {
-  runTest(testReadWriteFloorPlan, "Read/Write input file");
-  runTest(testIsValidFloorPlan, "isValid floor plan");
+  runTest(testReadWriteFloorPlan, "Read/Write Input File");
+  runTest(testIsValidFloorPlan, "Floor Plan Validity");
+  runTest(testPointsInside, "Points Inside Test");
 
   return 0;
 }
@@ -73,6 +75,44 @@ bool testIsValidFloorPlan() {
     in.close();
 
     std::cout << (plan.valid()? "Valid" : "Invalid") << " plan\n";
+  }
+  else {
+    std::cerr << "Error trying to open the file\n";
+    return false;
+  }
+
+  return true;
+}
+
+bool testPointsInside() {
+  std::ifstream in(input_file);
+  if (in.is_open()) {
+    flat::FloorPlan plan;
+
+    in >> plan;
+    in.close();
+
+    if (!plan.pointInside(flat::Point2(3, 4)))
+      return false;
+    if (!plan.pointInside(flat::Point2(3.2, 4.7)))
+      return false;
+    if (!plan.pointInside(flat::Point2(8.6, 6.65)))
+      return false;
+    if (!plan.pointInside(flat::Point2(7.1, 4.1)))
+      return false;
+    if (!plan.pointInside(flat::Point2(6.5, 5.25)))
+      return false;
+
+    if (plan.pointInside(flat::Point2(1.5, 2)))
+      return false;
+    if (plan.pointInside(flat::Point2(2.75, 0)))
+      return false;
+    if (plan.pointInside(flat::Point2(5, -1)))
+      return false;
+    if (plan.pointInside(flat::Point2(6.5, 4.75)))
+      return false;
+    if (plan.pointInside(flat::Point2(7.5, 2.76)))
+      return false;
   }
   else {
     std::cerr << "Error trying to open the file\n";
