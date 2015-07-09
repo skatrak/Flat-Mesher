@@ -1,6 +1,7 @@
 #include "FlatMesher/FloorPlan.h"
 #include "FlatMesher/Utils.h"
 
+#include <limits>
 #include <cmath>
 
 #define M_PI 3.14159265358979323846
@@ -42,6 +43,24 @@ bool FloorPlan::valid() const {
         return false;
 
   return true;
+}
+
+Rectangle FloorPlan::boundingBox() const {
+  double min_x = std::numeric_limits<double>::max();
+  double min_y = std::numeric_limits<double>::max();
+  double max_x = std::numeric_limits<double>::min();
+  double max_y = std::numeric_limits<double>::min();
+
+  for (auto i = m_nodes.begin(); i != m_nodes.end(); ++i) {
+    double x = i->getX(), y = i->getY();
+
+    if (x < min_x) min_x = x;
+    if (y < min_y) min_y = y;
+    if (x > max_x) max_x = x;
+    if (y > max_y) max_y = y;
+  }
+
+  return Rectangle(max_y, min_y, min_x, max_x);
 }
 
 bool FloorPlan::pointInside(const Point2& p) const {

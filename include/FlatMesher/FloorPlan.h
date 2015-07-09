@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "Point2.h"
+#include "Rectangle.h"
 
 namespace flat {
 
@@ -23,6 +24,9 @@ public:
   void setTriangleSize(double size) { m_triangle_sz = size; }
 
   bool valid() const;
+  Rectangle boundingBox() const;
+
+  // Not reliable if used for points in the boundaries
   bool pointInside(const Point2& p) const;
 
 private:
