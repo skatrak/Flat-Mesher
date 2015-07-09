@@ -21,6 +21,8 @@ public:
   void setY(double y) { m_y = y; }
   void setZ(double z) { m_z = z; }
 
+  double distance(const Point3& p) const;
+
   Point3& operator=(const Point3& p);
   Point3 operator+(const Point3& p) const;
   Point3 operator-(const Point3& p) const;

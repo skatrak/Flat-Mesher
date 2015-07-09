@@ -8,11 +8,17 @@ void runTest(bool(*test_func)(), const char* test_name) {
     std::cerr << "Test: " << test_name << " FAILED!\n";
 }
 
+// Global variables
+const char* input_file = "test/test1.flat";
+const char* output_file = "test/test1_gen.flat";
+
 // Tests
 bool testReadWriteFloorPlan();
+bool testIsValidFloorPlan();
 
 int main(int argc, char* argv[]) {
-  runTest(testReadWriteFloorPlan, "Read/Write Input file");
+  runTest(testReadWriteFloorPlan, "Read/Write input file");
+  runTest(testIsValidFloorPlan, "isValid floor plan");
 
   return 0;
 }
@@ -20,9 +26,6 @@ int main(int argc, char* argv[]) {
 bool testReadWriteFloorPlan() {
   std::ifstream in;
   std::ofstream out;
-
-  const char* input_file = "test/test1.flat";
-  const char* output_file = "test/test1_gen.flat";
 
   in.open(input_file);
   out.open(output_file);
@@ -55,6 +58,24 @@ bool testReadWriteFloorPlan() {
   }
   else {
     std::cerr << "Error trying to open the files\n";
+    return false;
+  }
+
+  return true;
+}
+
+bool testIsValidFloorPlan() {
+  std::ifstream in(input_file);
+  if (in.is_open()) {
+    flat::FloorPlan plan;
+
+    in >> plan;
+    in.close();
+
+    std::cout << (plan.valid()? "Valid" : "Invalid") << " plan\n";
+  }
+  else {
+    std::cerr << "Error trying to open the file\n";
     return false;
   }
 

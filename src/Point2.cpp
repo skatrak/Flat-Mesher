@@ -1,6 +1,15 @@
 #include "FlatMesher/Point2.h"
 
+#include <cmath>
+
 using namespace flat;
+
+double Point2::distance(const Point2& p) const {
+  double x_diff = p.getX() - getX();
+  double y_diff = p.getY() - getY();
+
+  return sqrt(x_diff * x_diff + y_diff * y_diff);
+}
 
 Point2& Point2::operator=(const Point2& p) {
   setX(p.getX());
@@ -42,4 +51,12 @@ std::istream& operator>>(std::istream& is, Point2& p) {
   p.setY(y);
 
   return is;
+}
+
+double Point2::cross(const Point2& p1, const Point2& p2) {
+  return p1.getX() * p2.getY() - p1.getY() * p2.getX();
+}
+
+double Point2::dot(const Point2& p1, const Point2& p2) {
+  return p1.getX() * p2.getX() + p1.getY() * p2.getY();
 }

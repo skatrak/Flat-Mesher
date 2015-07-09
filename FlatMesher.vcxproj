@@ -79,11 +79,14 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\FlatMesher\FloorPlan.h" />
+    <ClInclude Include="include\FlatMesher\Line2.h" />
     <ClInclude Include="include\FlatMesher\Point2.h" />
     <ClInclude Include="include\FlatMesher\Point3.h" />
+    <ClInclude Include="include\FlatMesher\Utils.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\FloorPlan.cpp" />
+    <ClCompile Include="src\Line2.cpp" />
     <ClCompile Include="src\Test.cpp" />
     <ClCompile Include="src\Point2.cpp" />
     <ClCompile Include="src\Point3.cpp" />
