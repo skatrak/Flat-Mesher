@@ -10,7 +10,7 @@ namespace flat {
 class Point3 {
 public:
   explicit Point3(double x = 0.0, double y = 0.0, double z = 0.0): m_x(x), m_y(y), m_z(z) {}
-  Point3(const Point3& p): m_x(p.m_x), m_y(p.m_y) {}
+  Point3(const Point3& p) = default;
   Point3(const Point2& p, double z = 0.0): m_x(p.getX()), m_y(p.getY()), m_z(z) {}
 
   double getX() const { return m_x; }
@@ -23,7 +23,6 @@ public:
 
   double distance(const Point3& p) const;
 
-  Point3& operator=(const Point3& p);
   Point3 operator+(const Point3& p) const;
   Point3 operator-(const Point3& p) const;
   Point3 operator*(double n) const;
@@ -31,6 +30,8 @@ public:
 
   bool operator==(const Point3& p) const;
   bool operator!=(const Point3& p) const { return !(*this == p); }
+
+  Point3& operator=(const Point3& p) = default;
 
 private:
   double m_x, m_y, m_z;

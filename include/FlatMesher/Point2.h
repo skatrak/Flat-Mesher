@@ -8,7 +8,7 @@ namespace flat {
 class Point2 {
 public:
   explicit Point2(double x = 0.0, double y = 0.0): m_x(x), m_y(y) {}
-  Point2(const Point2& p): m_x(p.m_x), m_y(p.m_y) {}
+  Point2(const Point2& p) = default;
 
   double getX() const { return m_x; }
   double getY() const { return m_y; }
@@ -18,7 +18,6 @@ public:
 
   double distance(const Point2& p) const;
 
-  Point2& operator=(const Point2& p);
   Point2 operator+(const Point2& p) const;
   Point2 operator-(const Point2& p) const;
   Point2 operator*(double n) const;
@@ -26,6 +25,8 @@ public:
 
   bool operator==(const Point2& p) const;
   bool operator!=(const Point2& p) const { return !(*this == p); }
+
+  Point2& operator=(const Point2& p) = default;
 
   static double cross(const Point2& p1, const Point2& p2);
   static double dot(const Point2& p1, const Point2& p2);

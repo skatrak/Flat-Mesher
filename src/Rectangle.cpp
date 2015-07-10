@@ -6,10 +6,10 @@ Rectangle::Rectangle(const Point2& tl, const Point2& lr):
  m_tl(tl), m_lr(lr) {}
 
 Rectangle::Rectangle(double top, double bottom, double left, double right):
-  m_tl(top, left), m_lr(bottom, right) {}
+  m_tl(left, top), m_lr(right, bottom) {}
 
 Rectangle::Rectangle(const Point2& tl, double width, double height):
-  m_tl(tl), m_lr(tl.getX() + width, tl.getY() + height) {}
+  m_tl(tl), m_lr(tl.getX() + width, tl.getY() - height) {}
 
 bool Rectangle::contains(const Point2& p) const {
   return m_tl.getX() <= p.getX() &&
@@ -28,6 +28,13 @@ bool Rectangle::intersects(const Rectangle& r) const {
 bool Rectangle::valid() const {
   return m_tl.getX() < m_lr.getX() &&
          m_tl.getY() > m_lr.getY();
+}
+
+void Rectangle::setTopLeft(const Point2& p) {
+  Point2 diff = p - m_tl;
+  
+  m_tl = p;
+  m_lr = m_lr + diff;
 }
 
 void Rectangle::setWidth(double width) {

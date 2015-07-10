@@ -7,7 +7,8 @@ namespace flat {
 
 class Rectangle {
 public:
-  Rectangle() {}
+  Rectangle() = default;
+  Rectangle(const Rectangle& rect) = default;
   Rectangle(const Point2& tl, const Point2& lr);
   Rectangle(const Point2& tl, double width, double height);
   Rectangle(double top, double bottom, double left, double right);
@@ -23,9 +24,11 @@ public:
   double getWidth() const { return m_lr.getX() - m_tl.getX(); }
   double getHeight() const { return m_tl.getY() - m_lr.getY(); }
 
-  void setTopLeft(const Point2& p) { m_tl = p; }
+  void setTopLeft(const Point2& p);
   void setWidth(double width);
   void setHeight(double height);
+
+  Rectangle& operator=(const Rectangle& rect) = default;
 
 private:
   // top-left and lower-right points

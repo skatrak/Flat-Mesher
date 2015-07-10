@@ -12,14 +12,6 @@ double Point3::distance(const Point3& p) const {
   return sqrt(x_diff * x_diff + y_diff * y_diff + z_diff * z_diff);
 }
 
-Point3& Point3::operator=(const Point3& p) {
-  setX(p.getX());
-  setY(p.getY());
-  setZ(p.getZ());
-
-  return *this;
-}
-
 Point3 Point3::operator+(const Point3& p) const {
   return Point3(m_x + p.m_x, m_y + p.m_y, m_z + p.m_z);
 }

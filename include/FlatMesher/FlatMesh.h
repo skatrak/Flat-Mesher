@@ -4,6 +4,7 @@
 #include <iostream>
 #include <vector>
 
+#include "Mesh.h"
 #include "Point3.h"
 
 namespace flat {
@@ -11,31 +12,25 @@ namespace flat {
 class FloorPlan;
 class Point2;
 class Rectangle;
-class WallMesh;
 
-class FlatMesh {
+class FlatMesh: public Mesh {
 public:
   FlatMesh(): m_plan(NULL) {}
+  FlatMesh(const FlatMesh& mesh): Mesh(mesh), m_plan(mesh.m_plan) {}
   virtual ~FlatMesh() {}
 
   void createFromPlan(const FloorPlan* plan);
-
-  std::vector<Point3> getNodes() const { return m_nodes; }
-  std::vector<size_t> getMesh() const { return m_mesh; }
-
   bool empty() const { return m_plan == NULL; }
 
+  FlatMesh& operator=(const FlatMesh&) = default;
+
 protected:
-  virtual WallMesh createWall(const Point2& p1, const Point2& p2, int starting_index) const;
-  virtual FlatMesh createCeiling(Rectangle bounding_box, double height) const;
-  virtual void merge(std::vector<WallMesh> walls, FlatMesh ceiling);
+  virtual Mesh createWall(const Point2& a, const Point2& b, int starting_index) const;
+  virtual Mesh createCeiling(Rectangle box, double height) const;
+  virtual void merge(std::vector<Mesh> walls, Mesh ceiling);
 
 private:
-  void setFloorPlan(const FloorPlan* plan);
-
   const FloorPlan* m_plan;
-  std::vector<Point3> m_nodes;
-  std::vector<size_t> m_mesh;
 
 };
 

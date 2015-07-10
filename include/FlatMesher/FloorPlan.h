@@ -13,9 +13,11 @@ namespace flat {
 class FloorPlan {
 public:
   FloorPlan(): m_height(0.0), m_triangle_sz(0.0) {}
+  FloorPlan(const FloorPlan& p) = default;
 
   std::vector<Point2> getNodes() const { return m_nodes; }
-  Point2 getNodeAt(size_t pos) { return m_nodes.at(pos); }
+  const Point2& getNodeAt(size_t index) const { return m_nodes.at(index); }
+  Point2& getNodeAt(size_t index) { return m_nodes.at(index); }
   double getHeight() const { return m_height; }
   double getTriangleSize() const { return m_triangle_sz; }
 
