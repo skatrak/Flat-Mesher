@@ -37,23 +37,35 @@ void FlatMesh::createFromPlan(const FloorPlan* plan) {
     acc_nodes[i] = acc_nodes[i - 1] + wall_nodes;
   }
 
-  std::vector<Mesh> walls;
+  std::vector<Mesh> walls(plan_sz);
 
-  #pragma omp parallel for firstprivate(plan_sz, acc_nodes) shared(walls) schedule(dynamic)
-  for (int i = 1; i <= plan_sz; ++i) {
-    Point2 a = plan_nodes[i - 1];
-    Point2 b = plan_nodes[i % plan_sz];
+  #pragma omp parallel firstprivate(plan_sz, acc_nodes) shared(plan_nodes, walls, plan)
+  {
+    #pragma omp for schedule(dynamic)
+    for (int i = 1; i <= plan_sz; ++i) {
+      Point2 a = plan_nodes[i - 1];
+      Point2 b = plan_nodes[i % plan_sz];
 
-    Mesh wall = createWall(a, b, acc_nodes[i]);
+      Mesh wall = createWall(a, b, acc_nodes[i]);
 
-    #pragma omp critical
-    walls.push_back(wall);
+      // Thread-safe
+      walls[i - 1] = wall;
+    }
+
+    Rectangle bounding_box;
+    Mesh ceiling;
+
+    // This can be executed before the for loop has finished
+    #pragma omp single copyprivate(bounding_box, ceiling)
+    {
+      bounding_box = plan->boundingBox();
+      ceiling = createCeiling(bounding_box, plan->getHeight());
+    }
+
+    // This only executes once the previous block and the loop are finished
+    #pragma omp single
+    merge(walls, ceiling);
   }
-
-  Rectangle bounding_box = plan->boundingBox();
-  Mesh ceiling = createCeiling(bounding_box, plan->getHeight());
-
-  merge(walls, ceiling);
 
   delete[] acc_nodes;
 }
@@ -76,27 +88,28 @@ Mesh FlatMesh::createWall(const Point2& a, const Point2& b, int starting_index) 
   // Leave out the last column, because it's created in the next wall
   // The edges between the last column and the second to last column are added by
   // the merge() method
-  for (size_t i = 0; i < nodes_xy - 1; ++i)
-    for (size_t j = 0; j < nodes_z; ++j)
-      wall.addNode(Point3(i * delta_x, i * delta_y, j * delta));
+  Point3 origin(a);
+  for (size_t i = 0; i < nodes_xy; ++i)
+    for (size_t j = 0; j <= nodes_z; ++j)
+      wall.addNode(origin + Point3(i * delta_x, i * delta_y, j * delta));
 
   // Add the edges that compose the mesh
   // For this to always order the indices of the nodes in counter-clockwise order
   // the 2D points of the floor plan must be specified in that order also
-  for (size_t i = 0; i < nodes_xy - 2; ++i) {
-    for (size_t j = 0; j < nodes_z - 1; ++j) {
-      size_t actual_idx = (i * nodes_z) + j;
+  for (size_t i = 0; i < nodes_xy - 1; ++i) {
+    for (size_t j = 0; j < nodes_z; ++j) {
+      size_t actual_idx = (i * (nodes_z + 1)) + j;
 
       /*  /|
          / |
         o__| */
-      IndexTriangle t1(actual_idx, actual_idx + nodes_z, actual_idx + nodes_z + 1);
+      IndexTriangle t1(actual_idx, actual_idx + nodes_z + 1, actual_idx + nodes_z + 2);
 
       /* ____
          |  /
          | /
          o/  */
-      IndexTriangle t2(actual_idx, actual_idx + nodes_z + 1, actual_idx + 1);
+      IndexTriangle t2(actual_idx, actual_idx + nodes_z + 2, actual_idx + 1);
 
       wall.addTriangle(t1);
       wall.addTriangle(t2);
