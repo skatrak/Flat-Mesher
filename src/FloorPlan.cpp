@@ -1,12 +1,43 @@
 #include "FlatMesher/FloorPlan.h"
+#include "FlatMesher/Line2.h"
 #include "FlatMesher/Utils.h"
 
 #include <limits>
 #include <cmath>
 
-#define M_PI 3.14159265358979323846
-
 using namespace flat;
+
+Rectangle FloorPlan::boundingBox() const {
+  double min_x = std::numeric_limits<double>::max();
+  double min_y = std::numeric_limits<double>::max();
+  double max_x = std::numeric_limits<double>::min();
+  double max_y = std::numeric_limits<double>::min();
+
+  for (auto i = m_nodes.begin(); i != m_nodes.end(); ++i) {
+    double x = i->getX(), y = i->getY();
+
+    if (x < min_x) min_x = x;
+    if (y < min_y) min_y = y;
+    if (x > max_x) max_x = x;
+    if (y > max_y) max_y = y;
+  }
+
+  return Rectangle(max_y, min_y, min_x, max_x);
+}
+
+double FloorPlan::boundaryLength() const {
+  size_t sz_nodes = m_nodes.size();
+  double len = 0.0;
+
+  for (size_t i = 0; i < sz_nodes; ++i) {
+    Point2 a = m_nodes[i];
+    Point2 b = m_nodes[(i + 1) % sz_nodes];
+
+    len += a.distance(b) / m_triangle_sz;
+  }
+
+  return len;
+}
 
 bool FloorPlan::valid() const {
   // Check if the number of nodes is enough
@@ -36,31 +67,26 @@ bool FloorPlan::valid() const {
   if (total >= 0.0)
     return false;
 
-  // Check if there are no repeated points
-  for (size_t i = 0; i < sz_nodes - 1; ++i)
+  // Check if there are no repeated points or intersecting segments
+  for (size_t i = 0; i < sz_nodes - 1; ++i) {
+    Line2 a(m_nodes[i], m_nodes[i + 1]);
+
     for (size_t j = i + 1; j < sz_nodes; ++j)
       if (m_nodes[i] == m_nodes[j])
         return false;
 
-  return true;
-}
-
-Rectangle FloorPlan::boundingBox() const {
-  double min_x = std::numeric_limits<double>::max();
-  double min_y = std::numeric_limits<double>::max();
-  double max_x = std::numeric_limits<double>::min();
-  double max_y = std::numeric_limits<double>::min();
-
-  for (auto i = m_nodes.begin(); i != m_nodes.end(); ++i) {
-    double x = i->getX(), y = i->getY();
-
-    if (x < min_x) min_x = x;
-    if (y < min_y) min_y = y;
-    if (x > max_x) max_x = x;
-    if (y > max_y) max_y = y;
+    // Don't check consecutive segments, because thay always intersect
+    // (they have a point in common)
+    for (size_t j = i + 2; j < sz_nodes; ++j) {
+      if (i != 0 || j < sz_nodes - 1) {
+        Line2 b(m_nodes[j], m_nodes[(j + 1) % sz_nodes]);
+        if (a.intersects(b))
+          return false;
+      }
+    }
   }
 
-  return Rectangle(max_y, min_y, min_x, max_x);
+  return true;
 }
 
 bool FloorPlan::pointInside(const Point2& p) const {
@@ -97,7 +123,7 @@ bool FloorPlan::pointInside(const Point2& p) const {
       Point2 y = y_start + (segment * Q_POINTS[j]);
       double norm_xy = p.distance(y);
 
-      local_integral += (-1.0 / (2 * M_PI) * Point2::dot(p-y, normal) /
+      local_integral += (-1.0 / (2 * utils::M_PI) * Point2::dot(p-y, normal) /
                          (norm_xy * norm_xy)) * Q_WEIGHTS[j];
     }
 
@@ -105,6 +131,19 @@ bool FloorPlan::pointInside(const Point2& p) const {
   }
 
   return integral > 0.5;
+}
+
+bool FloorPlan::pointInBoundary(const Point2& p) const {
+  size_t sz_nodes = m_nodes.size();
+  for (size_t i = 0; i <= sz_nodes; ++i) {
+    Point2 a = m_nodes[i];
+    Point2 b = m_nodes[(i + 1) % sz_nodes];
+
+    if (Line2(a, b).contains(p))
+      return true;
+  }
+
+  return false;
 }
 
 std::ostream& operator<<(std::ostream& os, const FloorPlan& fp) {

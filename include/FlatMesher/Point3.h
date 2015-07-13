@@ -15,7 +15,7 @@ public:
 
   double getX() const { return m_x; }
   double getY() const { return m_y; }
-  double getZ() const { return m_y; }
+  double getZ() const { return m_z; }
 
   void setX(double x) { m_x = x; }
   void setY(double y) { m_y = y; }

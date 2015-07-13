@@ -10,8 +10,10 @@ void runTest(bool(*test_func)(), const char* test_name) {
 }
 
 // Global variables
-const char* input_file = "test/test1.flat";
-const char* output_file = "test/test1_gen.flat";
+const char* flat1 = "test/test2.flat";
+const char* flat1_out = "test/test1_gen.flat";
+const char* mesh1 = "test/mesh1.txt";
+const char* mesh1_out = "test/mesh1_gen.txt";
 
 // Tests
 bool testReadWriteFloorPlan();
@@ -32,8 +34,8 @@ bool testReadWriteFloorPlan() {
   std::ifstream in;
   std::ofstream out;
 
-  in.open(input_file);
-  out.open(output_file);
+  in.open(flat1);
+  out.open(flat1_out);
 
   if (in.is_open() && out.is_open()) {
     flat::FloorPlan plan1, plan2;
@@ -43,7 +45,7 @@ bool testReadWriteFloorPlan() {
     out << plan1;
     out.close();
 
-    in.open(output_file);
+    in.open(flat1_out);
     if (in.is_open()) {
       in >> plan2;
       in.close();
@@ -70,7 +72,7 @@ bool testReadWriteFloorPlan() {
 }
 
 bool testIsValidFloorPlan() {
-  std::ifstream in(input_file);
+  std::ifstream in(flat1);
   if (in.is_open()) {
     flat::FloorPlan plan;
 
@@ -88,7 +90,7 @@ bool testIsValidFloorPlan() {
 }
 
 bool testPointsInside() {
-  std::ifstream in(input_file);
+  std::ifstream in(flat1);
   if (in.is_open()) {
     flat::FloorPlan plan;
 
@@ -126,7 +128,7 @@ bool testPointsInside() {
 }
 
 bool testMeshCreation() {
-  std::ifstream in(input_file);
+  std::ifstream in(flat1);
   if (in.is_open()) {
     flat::FloorPlan plan;
 
@@ -136,13 +138,25 @@ bool testMeshCreation() {
     flat::FlatMesh mesh;
     mesh.createFromPlan(&plan);
 
-    std::ofstream out(output_file);
-    if (out.is_open()) {
-      out << mesh;
-      out.close();
+    std::ifstream in_mesh(mesh1);
+    if (in_mesh.is_open()) {
+      flat::FlatMesh mesh1;
+
+      in_mesh >> mesh1;
+      in_mesh.close();
+
+      std::ofstream out_mesh(mesh1_out);
+      if (out_mesh.is_open()) {
+        out_mesh << mesh1;
+        out_mesh.close();
+      }
+      else {
+        std::cerr << "Error trying to open the output file\n";
+        return false;
+      }
     }
     else {
-      std::cerr << "Error trying to open the output file\n";
+      std::cerr << "Error trying to open the input file\n";
       return false;
     }
   }

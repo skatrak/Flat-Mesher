@@ -1,4 +1,5 @@
 #include "FlatMesher/Point3.h"
+#include "FlatMesher/Utils.h"
 
 #include <cmath>
 
@@ -29,7 +30,7 @@ Point3 Point3::operator/(double n) const {
 }
 
 bool Point3::operator==(const Point3& p) const {
-  return m_x == p.m_x && m_y == p.m_y && m_z == p.m_z;
+  return utils::areEqual(m_x, p.m_x) && utils::areEqual(m_y, p.m_y) && utils::areEqual(m_z, p.m_z);
 }
 
 std::ostream& operator<<(std::ostream& os, const Point3& p) {
@@ -43,7 +44,7 @@ std::istream& operator>>(std::istream& is, Point3& p) {
 
   p.setX(x);
   p.setY(y);
-  p.setY(z);
+  p.setZ(z);
 
   return is;
 }

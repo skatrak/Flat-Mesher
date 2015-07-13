@@ -15,6 +15,11 @@ std::vector<IndexTriangle> Mesh::getMesh(size_t index_offset) const {
   return copy;
 }
 
+void Mesh::setMesh(const std::vector<Point3>& nodes, const std::vector<IndexTriangle> edges) {
+  m_nodes = nodes;
+  m_mesh = edges;
+}
+
 void Mesh::addNode(const Point3& node) {
   m_nodes.push_back(node);
 }

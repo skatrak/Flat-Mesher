@@ -20,57 +20,37 @@ void FlatMesh::createFromPlan(const FloorPlan* plan) {
 
   std::vector<Point2> plan_nodes = plan->getNodes();
   int plan_sz = plan_nodes.size();
-
-  // Create a vector with the accumulated number of nodes that the 3D meshes
-  // will have, so that their creation can be done in parallel
-  size_t* acc_nodes = new size_t[plan_sz];
-  size_t nodes_y = (size_t) (plan->getHeight() / plan->getTriangleSize());
-
-  acc_nodes[0] = 0;
-  for (int i = 1; i <= plan_sz; ++i) {
-    Point2 a = plan_nodes[i - 1];
-    Point2 b = plan_nodes[i % plan_sz];
-
-    size_t nodes_x = (size_t) (a.distance(b) / plan->getTriangleSize());
-    size_t wall_nodes = (nodes_y + 1) * (nodes_x);
-
-    acc_nodes[i] = acc_nodes[i - 1] + wall_nodes;
-  }
-
   std::vector<Mesh> walls(plan_sz);
 
-  #pragma omp parallel firstprivate(plan_sz, acc_nodes) shared(plan_nodes, walls, plan)
+  #pragma omp parallel default(none) firstprivate(plan_sz) shared(plan_nodes, walls, plan)
   {
-    #pragma omp for schedule(dynamic)
+    #pragma omp for schedule(dynamic) nowait
     for (int i = 1; i <= plan_sz; ++i) {
       Point2 a = plan_nodes[i - 1];
       Point2 b = plan_nodes[i % plan_sz];
 
-      Mesh wall = createWall(a, b, acc_nodes[i]);
+      Mesh wall = createWall(a, b);
 
       // Thread-safe
       walls[i - 1] = wall;
     }
 
-    Rectangle bounding_box;
     Mesh ceiling;
 
+    // TODO Which is faster? Copying unnecessarily the variable to every thread
+    // or waiting for the loop to finish before executing this?
+
     // This can be executed before the for loop has finished
-    #pragma omp single copyprivate(bounding_box, ceiling)
-    {
-      bounding_box = plan->boundingBox();
-      ceiling = createCeiling(bounding_box, plan->getHeight());
-    }
+    #pragma omp single copyprivate(ceiling)
+    ceiling = createCeiling(plan->boundingBox(), plan->getHeight());
 
     // This only executes once the previous block and the loop are finished
     #pragma omp single
     merge(walls, ceiling);
   }
-
-  delete[] acc_nodes;
 }
 
-Mesh FlatMesh::createWall(const Point2& a, const Point2& b, int starting_index) const {
+Mesh FlatMesh::createWall(const Point2& a, const Point2& b) const {
   Mesh wall;
 
   double delta = m_plan->getTriangleSize();
@@ -100,9 +80,9 @@ Mesh FlatMesh::createWall(const Point2& a, const Point2& b, int starting_index) 
     for (size_t j = 0; j < nodes_z; ++j) {
       size_t actual_idx = (i * (nodes_z + 1)) + j;
 
-      /*  /|
-         / |
-        o__| */
+      /* /|
+        / |
+       o__| */
       IndexTriangle t1(actual_idx, actual_idx + nodes_z + 1, actual_idx + nodes_z + 2);
 
       /* ____
@@ -119,21 +99,92 @@ Mesh FlatMesh::createWall(const Point2& a, const Point2& b, int starting_index) 
   return wall;
 }
 
-Mesh FlatMesh::createCeiling(Rectangle box, double height) const {
+Mesh FlatMesh::createCeiling(const Rectangle& box, double height) const {
   // TODO
+  // Maybe return a list of indices of nodes that are part of the boundaries, so
+  // that the search for the nodes doesn't take long
   return Mesh();
 }
 
-void FlatMesh::merge(std::vector<Mesh> walls, Mesh ceiling) {
-  // TODO
+void FlatMesh::merge(const std::vector<Mesh>& walls, const Mesh& ceiling) {
+  // We merge the walls by offsetting the indices and creating the sub-mesh
+  // of each corner that we didn't do before
+  size_t acc_nodes = 0;
+  size_t nodes_z = (size_t) (m_plan->getHeight() / m_plan->getTriangleSize()) + 1;
+  size_t total_nodes = (size_t) m_plan->boundaryLength() * nodes_z;
+
+  double boundary = m_plan->boundaryLength();
+  for (size_t i = 0; i < walls.size(); ++i) {
+    Mesh wall = walls[i];
+
+    std::vector<Point3> nodes = wall.getNodes();
+    std::vector<IndexTriangle> indices = wall.getMesh(acc_nodes);
+
+    m_nodes.insert(m_nodes.end(), nodes.begin(), nodes.end());
+    m_mesh.insert(m_mesh.end(), indices.begin(), indices.end());
+
+    acc_nodes += nodes.size();
+
+    for (size_t j = 0; j < nodes_z - 1; ++j) {
+      size_t actual_idx = acc_nodes - nodes_z + j;
+
+      IndexTriangle t1(actual_idx, (actual_idx + nodes_z) % total_nodes, (actual_idx + nodes_z + 1) % total_nodes);
+      IndexTriangle t2(actual_idx, (actual_idx + nodes_z + 1) % total_nodes, actual_idx + 1);
+
+      m_mesh.push_back(t1);
+      m_mesh.push_back(t2);
+    }
+  }
+
+  // TODO Create floor. Merge ceiling and floor with the rest of the mesh.
+  // The indices coming from the ceiling have to be offset by "total_nodes"
+  // Then it's needed to walk over every segment and find the corresponding
+  // nodes in the ceiling to delete them and change the triangles where they appear
+  // Maybe it's a good idea to create a translation table and then apply it
 }
 
 std::ostream& operator<<(std::ostream& os, const flat::FlatMesh& mesh) {
-  // TODO
+  std::vector<Point3> nodes = mesh.getNodes();
+  std::vector<IndexTriangle> triangles = mesh.getMesh();
+
+  os << "3\n3\n\n";
+
+  os << nodes.size() << '\n';
+  for (auto i = nodes.begin(); i != nodes.end(); ++i)
+    os << *i << '\n';
+
+  os << '\n' << triangles.size();
+  for (auto i = triangles.begin(); i != triangles.end(); ++i)
+    os << '\n' << *i;
+
   return os;
 }
 
 std::istream& operator>>(std::istream& is, flat::FlatMesh& mesh) {
-  // TODO
+  size_t sp_dim, nodes_el;
+
+  is >> sp_dim;
+  is >> nodes_el;
+  if (sp_dim != 3 || nodes_el != 3) {
+    is.clear(std::ios::failbit);
+    return is;
+  }
+
+  size_t total_nodes;
+  is >> total_nodes;
+
+  std::vector<Point3> nodes(total_nodes);
+  for (size_t i = 0; i < total_nodes; ++i)
+    is >> nodes[i];
+
+  size_t total_edges;
+  is >> total_edges;
+
+  std::vector<IndexTriangle> edges(total_edges, IndexTriangle(0, 0, 0));
+  for (size_t i = 0; i < total_edges; ++i)
+    is >> edges[i];
+
+  mesh.setMesh(nodes, edges);
+
   return is;
 }

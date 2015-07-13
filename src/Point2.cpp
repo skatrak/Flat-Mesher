@@ -1,4 +1,5 @@
 #include "FlatMesher/Point2.h"
+#include "FlatMesher/Utils.h"
 
 #include <cmath>
 
@@ -28,7 +29,7 @@ Point2 Point2::operator/(double n) const {
 }
 
 bool Point2::operator==(const Point2& p) const {
-  return m_x == p.m_x && m_y == p.m_y;
+  return utils::areEqual(m_x, p.m_x) && utils::areEqual(m_y, p.m_y);
 }
 
 std::ostream& operator<<(std::ostream& os, const Point2& p) {

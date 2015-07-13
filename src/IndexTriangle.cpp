@@ -11,3 +11,19 @@ IndexTriangle IndexTriangle::offset(size_t index_offset) const {
 void IndexTriangle::invertRotation() {
   std::swap(m_j, m_k);
 }
+
+std::ostream& operator<<(std::ostream& os, const flat::IndexTriangle& triangle) {
+  os << triangle.getI() << ' ' << triangle.getJ() << ' ' << triangle.getK();
+  return os;
+}
+
+std::istream& operator>>(std::istream& is, flat::IndexTriangle& triangle) {
+  size_t i, j, k;
+  is >> i >> j >> k;
+
+  triangle.setI(i);
+  triangle.setJ(j);
+  triangle.setK(k);
+
+  return is;
+}

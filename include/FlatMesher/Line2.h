@@ -15,11 +15,15 @@ public:
   Point2 getA() const { return m_a; }
   Point2 getB() const { return m_b; }
 
-  void setA(Point2 a) { m_a = a; }
-  void setB(Point2 b) { m_b = b; }
+  void setA(const Point2& a) { m_a = a; }
+  void setB(const Point2& b) { m_b = b; }
 
   Rectangle boundingBox() const;
   double slope() const;
+
+  bool valid() const;
+  bool contains(const Point2& p) const;
+  bool intersects(const Line2& l) const;
 
   bool operator==(const Line2& l) const;
   bool operator!=(const Line2& l) const { return !(*this == l); }

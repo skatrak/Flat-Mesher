@@ -25,11 +25,13 @@ public:
   void setHeight(double height) { m_height = height; }
   void setTriangleSize(double size) { m_triangle_sz = size; }
 
-  bool valid() const;
   Rectangle boundingBox() const;
+  double boundaryLength() const;
 
+  bool valid() const;
   // Not reliable if used for points in the boundaries
   bool pointInside(const Point2& p) const;
+  bool pointInBoundary(const Point2& p) const;
 
 private:
   std::vector<Point2> m_nodes;

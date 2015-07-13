@@ -17,7 +17,7 @@ class FlatMesh: public Mesh {
 public:
   FlatMesh(): m_plan(NULL) {}
   FlatMesh(const FlatMesh& mesh): Mesh(mesh), m_plan(mesh.m_plan) {}
-  virtual ~FlatMesh() {}
+  ~FlatMesh() = default;
 
   void createFromPlan(const FloorPlan* plan);
   bool empty() const { return m_plan == NULL; }
@@ -25,9 +25,9 @@ public:
   FlatMesh& operator=(const FlatMesh&) = default;
 
 protected:
-  virtual Mesh createWall(const Point2& a, const Point2& b, int starting_index) const;
-  virtual Mesh createCeiling(Rectangle box, double height) const;
-  virtual void merge(std::vector<Mesh> walls, Mesh ceiling);
+  Mesh createWall(const Point2& a, const Point2& b) const;
+  Mesh createCeiling(const Rectangle& box, double height) const;
+  void merge(const std::vector<Mesh>& walls, const Mesh& ceiling);
 
 private:
   const FloorPlan* m_plan;
