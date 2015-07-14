@@ -135,7 +135,7 @@ bool FloorPlan::pointInside(const Point2& p) const {
 
 bool FloorPlan::pointInBoundary(const Point2& p) const {
   size_t sz_nodes = m_nodes.size();
-  for (size_t i = 0; i <= sz_nodes; ++i) {
+  for (size_t i = 0; i < sz_nodes; ++i) {
     Point2 a = m_nodes[i];
     Point2 b = m_nodes[(i + 1) % sz_nodes];
 

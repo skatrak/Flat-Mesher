@@ -20,8 +20,9 @@ void Mesh::setMesh(const std::vector<Point3>& nodes, const std::vector<IndexTria
   m_mesh = edges;
 }
 
-void Mesh::addNode(const Point3& node) {
+size_t Mesh::addNode(const Point3& node) {
   m_nodes.push_back(node);
+  return m_nodes.size() - 1;
 }
 
 void Mesh::addTriangle(const IndexTriangle& triangle) {

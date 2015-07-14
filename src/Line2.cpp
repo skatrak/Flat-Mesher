@@ -40,7 +40,7 @@ bool Line2::contains(const Point2& p) const {
   double m = slope();
   double b = m_a.getY() - m * m_a.getX();
 
-  return utils::areEqual(p.getY(), m * p.getX() + b);
+  return utils::areEqual(p.getY(), m * p.getX() + b) && boundingBox().contains(p);
 }
 
 bool Line2::intersects(const Line2& l) const {

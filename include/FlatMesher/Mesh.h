@@ -22,7 +22,7 @@ public:
   void setMesh(const std::vector<Point3>& nodes, const std::vector<IndexTriangle> edges);
 
   void move(double x, double y = 0.0, double z = 0.0);
-  void addNode(const Point3& node);
+  size_t addNode(const Point3& node);
   void addTriangle(const IndexTriangle& triangle);
 
   Mesh& operator=(const Mesh&) = default;
