@@ -311,7 +311,7 @@ void FlatMesh::merge(const std::vector<Mesh>& walls, const std::vector<size_t>& 
   std::vector<IndexTriangle> mesh_ceil = ceiling.getMesh(ceil_offset);
   std::vector<IndexTriangle> mesh_floor = floor.getMesh(floor_offset);
 
-  #pragma omp parallel for schedule(guided) shared(mesh_ceil, mesh floor)
+  #pragma omp parallel for schedule(guided) shared(mesh_ceil, mesh_floor)
   for (int i = 0; i < mesh_ceil.size(); ++i) {
     processTriangle(boundaries, tr_floor, ceil_offset, nodes_z - 1, mesh_ceil[i]);
     processTriangle(boundaries, tr_floor, floor_offset, 0, mesh_floor[i]);
