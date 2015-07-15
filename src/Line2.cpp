@@ -23,6 +23,10 @@ double Line2::slope() const {
   return (m_b.getY() - m_a.getY()) / (m_b.getX() - m_a.getX());
 }
 
+double Line2::length() const {
+  return m_a.distance(m_b);
+}
+
 bool Line2::valid() const {
   return m_a != m_b;
 }
@@ -30,10 +34,10 @@ bool Line2::valid() const {
 bool Line2::contains(const Point2& p) const {
   // Vertical line
   if (m_a.getX() == m_b.getX()) {
-    double minY = std::fmin(m_a.getY(), m_b.getY());
-    double maxY = std::fmax(m_a.getY(), m_b.getY());
+    double min_y = std::fmin(m_a.getY(), m_b.getY());
+    double max_y = std::fmax(m_a.getY(), m_b.getY());
 
-    return p.getX() == m_a.getX() && p.getY() >= minY && p.getY() <= maxY;
+    return p.getX() == m_a.getX() && p.getY() >= min_y && p.getY() <= max_y;
   }
 
   // General case (y = mx + b)

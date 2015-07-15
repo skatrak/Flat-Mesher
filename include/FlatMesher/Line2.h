@@ -20,6 +20,7 @@ public:
 
   Rectangle boundingBox() const;
   double slope() const;
+  double length() const;
 
   bool valid() const;
   bool contains(const Point2& p) const;

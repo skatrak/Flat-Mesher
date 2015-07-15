@@ -50,14 +50,18 @@ bool FloorPlan::valid() const {
   if (!utils::isInteger(tmp))
     return false;
 
-  // Check if sizes between points are divisible by the triangle size
-  // and if points are given in CCW order
+  // Check if sizes between points and the slope of the segments are divisible
+  // by the triangle size, and if points are given in CCW order
   double total = 0;
   for (size_t i = 1; i <= sz_nodes; ++i) {
     Point2 a = m_nodes[i - 1];
     Point2 b = m_nodes[i % sz_nodes];
 
-    if (!utils::isInteger(a.distance(b)))
+    Line2 ab(a, b);
+    double slope = ab.slope();
+
+    if (!utils::isInteger(ab.length()) || (slope != std::numeric_limits<double>::max() &&
+                                           !utils::isInteger(ab.slope() / m_triangle_sz)))
       return false;
 
     total += (b.getX() - a.getX()) * (a.getY() + b.getY());

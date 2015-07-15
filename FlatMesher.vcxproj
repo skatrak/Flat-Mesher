@@ -94,9 +94,13 @@
     <ClCompile Include="src\FloorPlan.cpp" />
     <ClCompile Include="src\IndexTriangle.cpp" />
     <ClCompile Include="src\Line2.cpp" />
+    <ClCompile Include="src\Main.cpp" />
     <ClCompile Include="src\Mesh.cpp" />
     <ClCompile Include="src\Rectangle.cpp" />
-    <ClCompile Include="src\Test.cpp" />
+    <ClCompile Include="src\Tests\Test.cpp">
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">true</ExcludedFromBuild>
+      <ExcludedFromBuild Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">true</ExcludedFromBuild>
+    </ClCompile>
     <ClCompile Include="src\Point2.cpp" />
     <ClCompile Include="src\Point3.cpp" />
     <ClCompile Include="src\Triangle2.cpp" />

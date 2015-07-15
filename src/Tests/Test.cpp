@@ -10,7 +10,7 @@ void runTest(bool(*test_func)(), const char* test_name) {
 }
 
 // Global variables
-const char* flat1 = "test/test2.flat";
+const char* flat1 = "test/test1.flat";
 const char* flat1_out = "test/test1_gen.flat";
 const char* mesh1 = "test/mesh1.txt";
 const char* mesh1_out = "test/mesh1_gen.txt";

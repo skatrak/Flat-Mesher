@@ -37,3 +37,8 @@ void Mesh::move(double x, double y, double z) {
   for (auto i = m_nodes.begin(); i != m_nodes.end(); ++i)
     *i = *i + translation;
 }
+
+void Mesh::invert() {
+  for (auto i = m_mesh.begin(); i != m_mesh.end(); ++i)
+    i->invertRotation();
+}

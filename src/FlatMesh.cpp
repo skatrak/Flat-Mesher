@@ -1,5 +1,6 @@
 #include "FlatMesher/FlatMesh.h"
 #include "FlatMesher/FloorPlan.h"
+#include "FlatMesher/Line2.h"
 #include "FlatMesher/Point2.h"
 #include "FlatMesher/Rectangle.h"
 #include "FlatMesher/Utils.h"
@@ -44,11 +45,9 @@ void FlatMesh::createFromPlan(const FloorPlan* plan) {
     // This can be executed before the for loop has finished
     #pragma omp single
     ceiling = createCeiling(plan->boundingBox(), boundaries);
-
-    // This only executes once the previous block and the loop are finished
-    #pragma omp single
-    merge(walls, ceiling);
   }
+
+  merge(walls, boundaries, ceiling);
 }
 
 Mesh FlatMesh::createWall(const Point2& a, const Point2& b) const {
@@ -220,14 +219,15 @@ Mesh FlatMesh::createCeiling(const Rectangle& box, std::vector<size_t>& boundary
   return ceiling;
 }
 
-void FlatMesh::merge(const std::vector<Mesh>& walls, const Mesh& ceiling) {
+void FlatMesh::merge(const std::vector<Mesh>& walls, const std::vector<size_t>& boundaries, const Mesh& ceiling) {
   // We merge the walls by offsetting the indices and creating the sub-mesh
   // of each corner that we didn't create before
+  std::vector<size_t> nodes_amount(walls.size());
   size_t acc_nodes = 0;
+
   size_t nodes_z = (size_t) (m_plan->getHeight() / m_plan->getTriangleSize()) + 1;
   size_t total_nodes = (size_t) m_plan->boundaryLength() * nodes_z;
 
-  double boundary = m_plan->boundaryLength();
   for (size_t i = 0; i < walls.size(); ++i) {
     Mesh wall = walls[i];
 
@@ -238,6 +238,7 @@ void FlatMesh::merge(const std::vector<Mesh>& walls, const Mesh& ceiling) {
     m_mesh.insert(m_mesh.end(), indices.begin(), indices.end());
 
     acc_nodes += nodes.size();
+    nodes_amount[i] = nodes.size();
 
     for (size_t j = 0; j < nodes_z - 1; ++j) {
       size_t actual_idx = acc_nodes - nodes_z + j;
@@ -250,11 +251,75 @@ void FlatMesh::merge(const std::vector<Mesh>& walls, const Mesh& ceiling) {
     }
   }
 
-  // TODO Create the floor. Merge ceiling and floor with the rest of the mesh.
-  // The indices coming from the ceiling have to be offset by "total_nodes"
-  // Then it's needed to walk over every segment and find the corresponding
-  // nodes in the ceiling to delete them and change the triangles where they appear
-  // Maybe it's a good idea to create a translation table and then apply it
+  // Creation of the floor mesh from the ceiling mesh
+  Mesh floor = ceiling;
+  floor.move(0, 0, -m_plan->getHeight());
+  floor.invert();
+
+  std::vector<Point3> nodes = ceiling.getNodes();
+  std::map<size_t, size_t> tr_floor;
+
+  std::vector<Point2> plan_nodes = m_plan->getNodes();
+  size_t plan_sz = plan_nodes.size();
+  size_t boundary_sz = boundaries.size();
+
+  acc_nodes = 0;
+
+  // Walk over every segment and find the corresponding nodes in the ceiling
+  // to fill the translation table
+  for (size_t i = 0; i < plan_sz; ++i) {
+    Point2 a = plan_nodes[i];
+    Point2 b = plan_nodes[(i + 1) % plan_sz];
+
+    Line2 ab(a, b);
+
+    for (size_t j = 0; j < boundary_sz; ++j) {
+      Point3 boundary_point = nodes[boundaries[j]];
+      Point2 boundary_2d(boundary_point.getX(), boundary_point.getY());
+
+      if (ab.contains(boundary_2d)) {
+        // Find the index in the line where the "boundary_point" is
+        // We know that nodes are ordered by columns from bottom to top, so
+        // it's only needed the column index and the index where the current
+        // wall starts to figure out the global index of the corresponding top
+        // and bottom nodes (ceiling and floor)
+        size_t wall_column_idx = (size_t) (a.distance(boundary_2d) / m_plan->getTriangleSize());
+        tr_floor[boundaries[j]] = (acc_nodes + wall_column_idx * nodes_z) % total_nodes;
+      }
+    }
+
+    acc_nodes += nodes_amount[i];
+  }
+
+  // Get the nodes which are not part of the boundaries and add them to the mesh
+  for (size_t i = 0; i < nodes.size(); ++i) {
+    if (tr_floor.find(i) == tr_floor.end())
+      m_nodes.push_back(nodes[i]);
+  }
+
+  nodes = floor.getNodes();
+  for (size_t i = 0; i < nodes.size(); ++i) {
+    if (tr_floor.find(i) == tr_floor.end())
+      m_nodes.push_back(nodes[i]);
+  }
+
+  // Take the meshes of the ceiling and floor and change the indices to match
+  // the new ones, by applying offsets and translations
+  size_t ceil_offset = total_nodes;
+  size_t floor_offset = total_nodes + nodes.size() - boundary_sz;
+
+  std::vector<IndexTriangle> mesh_ceil = ceiling.getMesh(ceil_offset);
+  std::vector<IndexTriangle> mesh_floor = floor.getMesh(floor_offset);
+
+  #pragma omp parallel for schedule(guided) shared(mesh_ceil, mesh floor)
+  for (int i = 0; i < mesh_ceil.size(); ++i) {
+    processTriangle(boundaries, tr_floor, ceil_offset, nodes_z - 1, mesh_ceil[i]);
+    processTriangle(boundaries, tr_floor, floor_offset, 0, mesh_floor[i]);
+  }
+
+  // Add all the new triangles to the flat's mesh
+  m_mesh.insert(m_mesh.end(), mesh_ceil.begin(), mesh_ceil.end());
+  m_mesh.insert(m_mesh.end(), mesh_floor.begin(), mesh_floor.end());
 }
 
 void FlatMesh::submesh(size_t a_idx, size_t b_idx, size_t c_idx, size_t d_idx,
@@ -274,6 +339,37 @@ void FlatMesh::submesh(size_t a_idx, size_t b_idx, size_t c_idx, size_t d_idx,
   }
   else if (b_in && c_in && d_in)
     mesh.addTriangle(IndexTriangle(b_idx, c_idx, d_idx));
+}
+
+void FlatMesh::processTriangle(const std::vector<size_t>& boundaries,
+                               const std::map<size_t, size_t>& tr_floor, size_t input_offset,
+                               size_t output_offset, IndexTriangle& triangle) {
+  triangle.setI(processTriangleIndex(boundaries, tr_floor, input_offset, output_offset, triangle.getI()));
+  triangle.setJ(processTriangleIndex(boundaries, tr_floor, input_offset, output_offset, triangle.getJ()));
+  triangle.setK(processTriangleIndex(boundaries, tr_floor, input_offset, output_offset, triangle.getK()));
+}
+
+size_t FlatMesh::processTriangleIndex(const std::vector<size_t>& boundaries,
+                                      const std::map<size_t, size_t>& tr_floor, size_t input_offset,
+                                      size_t output_offset, size_t idx) {
+  std::map<size_t, size_t>::const_iterator itm;
+
+  // If the index has to be translated, we just use the translation table
+  if ((itm = tr_floor.find(idx - input_offset)) != tr_floor.end())
+    return itm->second + output_offset;
+
+  // In case it does not have to be translated, we decrement the index as many
+  // times as nodes with smaller indices are in the boundaries of the mesh
+  // This is needed in order to keep the indices of the mesh correct after
+  // deleting the boundary nodes
+  else {
+    size_t i;
+    for (i = 0; i < boundaries.size(); ++i)
+      if (boundaries[i] > idx - input_offset)
+        break;
+
+    return idx - i;
+  }
 }
 
 std::ostream& operator<<(std::ostream& os, const flat::FlatMesh& mesh) {
