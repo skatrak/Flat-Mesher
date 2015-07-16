@@ -12,8 +12,8 @@ inline bool isInteger(double n) {
   return n == (int) n;
 }
 
-inline bool areEqual(double x, double y) {
-  return std::abs(x - y) < DOUBLE_EPSILON;
+inline bool areEqual(double x, double y, double epsilon = DOUBLE_EPSILON) {
+  return std::abs(x - y) < epsilon;
 }
 
 }} // namespace flat::utils

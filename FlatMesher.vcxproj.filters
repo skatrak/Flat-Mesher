@@ -21,6 +21,8 @@
     <None Include="test\test4.flat" />
     <None Include=".gitignore" />
     <None Include="build\.gitignore" />
+    <None Include="test\test5.flat" />
+    <None Include="test\test6.flat" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\FlatMesher\Point2.h">

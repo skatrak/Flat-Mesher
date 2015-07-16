@@ -60,8 +60,8 @@ bool FloorPlan::valid() const {
     Line2 ab(a, b);
     double slope = ab.slope();
 
-    if (!utils::isInteger(ab.length()) || (slope != std::numeric_limits<double>::max() &&
-                                           !utils::isInteger(ab.slope() / m_triangle_sz)))
+    if (!utils::isInteger(ab.length() / m_triangle_sz) ||
+        (slope != std::numeric_limits<double>::max() && !utils::isInteger(slope / m_triangle_sz)))
       return false;
 
     total += (b.getX() - a.getX()) * (a.getY() + b.getY());
