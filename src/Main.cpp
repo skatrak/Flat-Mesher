@@ -3,6 +3,8 @@
 
 #include <FlatMesher/FloorPlan.h>
 #include <FlatMesher/FlatMesh.h>
+#include <FlatMesher/BemgenMeshFormatter.h>
+#include <FlatMesher/VTUMeshFormatter.h>
 
 void printUsage(char* program_name) {
   std::cout << "Usage: " << program_name << " <input_file> <output_file>\n";
@@ -40,9 +42,11 @@ int main(int argc, char* argv []) {
   }
 
   flat::FlatMesh mesh;
-  mesh.createFromPlan(&plan);
+  flat::VTUMeshFormatter fmt;
 
-  out << mesh;
+  mesh.createFromPlan(&plan);
+  fmt.writeMesh(out, mesh);
+
   out.close();
 
   std::cout << "Mesh generated successfully at \"" << argv[2] << "\".";

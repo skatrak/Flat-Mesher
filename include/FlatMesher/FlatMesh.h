@@ -31,7 +31,7 @@ protected:
   void merge(const std::vector<Mesh>& walls, const std::vector<size_t>& boundary_nodes, const Mesh& ceiling);
 
   inline static void submesh(size_t a_idx, size_t b_idx, size_t c_idx, size_t d_idx,
-                             bool a_in, bool b_in, bool c_in, bool d_in, Mesh& mesh);
+                             bool a_in, bool b_in, bool c_in, bool d_in, bool m_in, Mesh& mesh);
   inline static void processTriangle(const std::vector<size_t>& boundaries,
                                      const std::map<size_t, size_t>& tr_floor, size_t input_offset,
                                      size_t output_offset, IndexTriangle& triangle);
@@ -45,8 +45,5 @@ private:
 };
 
 } // namespace flat
-
-std::ostream& operator<<(std::ostream& os, const flat::FlatMesh& mesh);
-std::istream& operator>>(std::istream& is, flat::FlatMesh& mesh);
 
 #endif // FLATMESHER_FLATMESH_H_

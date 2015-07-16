@@ -16,6 +16,11 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="test\test1.flat" />
+    <None Include="test\test3.flat" />
+    <None Include="test\test2.flat" />
+    <None Include="test\test4.flat" />
+    <None Include=".gitignore" />
+    <None Include="build\.gitignore" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="include\FlatMesher\Point2.h">
@@ -46,6 +51,15 @@
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
     <ClInclude Include="include\FlatMesher\Triangle2.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="include\FlatMesher\MeshFormatter.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="include\FlatMesher\BemgenMeshFormatter.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="include\FlatMesher\VTUMeshFormatter.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
   </ItemGroup>
@@ -83,5 +97,15 @@
     <ClCompile Include="src\Tests\Test.cpp">
       <Filter>Archivos de código fuente</Filter>
     </ClCompile>
+    <ClCompile Include="src\BemgenMeshFormatter.cpp">
+      <Filter>Archivos de código fuente</Filter>
+    </ClCompile>
+    <ClCompile Include="src\VTUMeshFormatter.cpp">
+      <Filter>Archivos de código fuente</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
+    <Text Include="README.txt" />
   </ItemGroup>
 </Project>

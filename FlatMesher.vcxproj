@@ -75,21 +75,30 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <None Include=".gitignore" />
+    <None Include="build\.gitignore" />
     <None Include="test\test1.flat" />
+    <None Include="test\test2.flat" />
+    <None Include="test\test3.flat" />
+    <None Include="test\test4.flat" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="include\FlatMesher\BemgenMeshFormatter.h" />
     <ClInclude Include="include\FlatMesher\FlatMesh.h" />
     <ClInclude Include="include\FlatMesher\FloorPlan.h" />
     <ClInclude Include="include\FlatMesher\IndexTriangle.h" />
     <ClInclude Include="include\FlatMesher\Line2.h" />
     <ClInclude Include="include\FlatMesher\Mesh.h" />
+    <ClInclude Include="include\FlatMesher\MeshFormatter.h" />
     <ClInclude Include="include\FlatMesher\Point2.h" />
     <ClInclude Include="include\FlatMesher\Point3.h" />
     <ClInclude Include="include\FlatMesher\Rectangle.h" />
     <ClInclude Include="include\FlatMesher\Triangle2.h" />
     <ClInclude Include="include\FlatMesher\Utils.h" />
+    <ClInclude Include="include\FlatMesher\VTUMeshFormatter.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="src\BemgenMeshFormatter.cpp" />
     <ClCompile Include="src\FlatMesh.cpp" />
     <ClCompile Include="src\FloorPlan.cpp" />
     <ClCompile Include="src\IndexTriangle.cpp" />
@@ -104,6 +113,11 @@
     <ClCompile Include="src\Point2.cpp" />
     <ClCompile Include="src\Point3.cpp" />
     <ClCompile Include="src\Triangle2.cpp" />
+    <ClCompile Include="src\VTUMeshFormatter.cpp" />
+  </ItemGroup>
+  <ItemGroup>
+    <Text Include="CMakeLists.txt" />
+    <Text Include="README.txt" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

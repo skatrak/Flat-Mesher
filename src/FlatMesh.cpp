@@ -126,9 +126,10 @@ Mesh FlatMesh::createCeiling(const Rectangle& box, std::vector<size_t>& boundary
   }
 
   // We iterate through the bounding box analyzing each group of 4 points
-  // in order to create the triangular mesh
+  // in order to create the triangular mesh. The middle point is used to detect
+  // diagonal walls.
   // d --- c
-  // |     |
+  // |  m  |
   // a --- b
   for (size_t iy = 1; iy <= height; ++iy) {
     double y = iy * delta;
@@ -145,6 +146,7 @@ Mesh FlatMesh::createCeiling(const Rectangle& box, std::vector<size_t>& boundary
     // Coordinates of the points we will create
     Point2 c(delta, y);
     Point2 d(0, y);
+    Point2 m(delta / 2.0, y - (delta / 2.0));
 
     // Check if the two new points are part of the boundary
     bool c_bo = m_plan->pointInBoundary(c);
@@ -155,6 +157,7 @@ Mesh FlatMesh::createCeiling(const Rectangle& box, std::vector<size_t>& boundary
     bool b_in = b_idx != std::numeric_limits<size_t>::max();
     bool c_in = c_bo || m_plan->pointInside(c);
     bool d_in = d_bo || m_plan->pointInside(d);
+    bool m_in = m_plan->pointInBoundary(m) || m_plan->pointInside(m);
 
     // Add the new two points if they are part of the mesh
     if (d_in) {
@@ -170,7 +173,7 @@ Mesh FlatMesh::createCeiling(const Rectangle& box, std::vector<size_t>& boundary
     }
 
     // Create the triangles
-    submesh(a_idx, b_idx, c_idx, d_idx, a_in, b_in, c_in, d_in, ceiling);
+    submesh(a_idx, b_idx, c_idx, d_idx, a_in, b_in, c_in, d_in, m_in, ceiling);
 
     // Save indices for the next row
     current_row_idx[0] = d_idx;
@@ -192,6 +195,7 @@ Mesh FlatMesh::createCeiling(const Rectangle& box, std::vector<size_t>& boundary
 
       d = c;
       c = Point2(x, y);
+      m = Point2(x - (delta / 2.0), y - (delta / 2.0));
 
       c_bo = m_plan->pointInBoundary(c);
 
@@ -199,6 +203,7 @@ Mesh FlatMesh::createCeiling(const Rectangle& box, std::vector<size_t>& boundary
       d_in = c_in;
       b_in = b_idx != std::numeric_limits<size_t>::max();
       c_in = c_bo || m_plan->pointInside(c);
+      m_in = m_plan->pointInBoundary(m) || m_plan->pointInside(m);
 
       if (c_in) {
         c_idx = ceiling.addNode(Point3(c, m_plan->getHeight()));
@@ -206,7 +211,7 @@ Mesh FlatMesh::createCeiling(const Rectangle& box, std::vector<size_t>& boundary
           boundary_nodes.push_back(c_idx);
       }
 
-      submesh(a_idx, b_idx, c_idx, d_idx, a_in, b_in, c_in, d_in, ceiling);
+      submesh(a_idx, b_idx, c_idx, d_idx, a_in, b_in, c_in, d_in, m_in, ceiling);
       current_row_idx[ix] = c_idx;
     }
 
@@ -323,22 +328,24 @@ void FlatMesh::merge(const std::vector<Mesh>& walls, const std::vector<size_t>& 
 }
 
 void FlatMesh::submesh(size_t a_idx, size_t b_idx, size_t c_idx, size_t d_idx,
-                       bool a_in, bool b_in, bool c_in, bool d_in, Mesh& mesh) {
+                       bool a_in, bool b_in, bool c_in, bool d_in, bool m_in, Mesh& mesh) {
   // d --- c
-  // |     |
+  // |  m  |
   // a --- b
-  if (a_in) {
-    if (c_in) {
-      if (b_in)
-        mesh.addTriangle(IndexTriangle(a_idx, b_idx, c_idx));
-      if (d_in)
-        mesh.addTriangle(IndexTriangle(a_idx, c_idx, d_idx));
+  if (m_in) {
+    if (a_in) {
+      if (c_in) {
+        if (b_in)
+          mesh.addTriangle(IndexTriangle(a_idx, b_idx, c_idx));
+        if (d_in)
+          mesh.addTriangle(IndexTriangle(a_idx, c_idx, d_idx));
+      }
+      else if (b_in && d_in)
+        mesh.addTriangle(IndexTriangle(a_idx, b_idx, d_idx));
     }
-    else if (b_in && d_in)
-      mesh.addTriangle(IndexTriangle(a_idx, b_idx, d_idx));
+    else if (b_in && c_in && d_in)
+      mesh.addTriangle(IndexTriangle(b_idx, c_idx, d_idx));
   }
-  else if (b_in && c_in && d_in)
-    mesh.addTriangle(IndexTriangle(b_idx, c_idx, d_idx));
 }
 
 void FlatMesh::processTriangle(const std::vector<size_t>& boundaries,
@@ -370,50 +377,4 @@ size_t FlatMesh::processTriangleIndex(const std::vector<size_t>& boundaries,
 
     return idx - i;
   }
-}
-
-std::ostream& operator<<(std::ostream& os, const flat::FlatMesh& mesh) {
-  std::vector<Point3> nodes = mesh.getNodes();
-  std::vector<IndexTriangle> triangles = mesh.getMesh();
-
-  os << "3\n3\n\n";
-
-  os << nodes.size() << '\n';
-  for (auto i = nodes.begin(); i != nodes.end(); ++i)
-    os << *i << '\n';
-
-  os << '\n' << triangles.size();
-  for (auto i = triangles.begin(); i != triangles.end(); ++i)
-    os << '\n' << *i;
-
-  return os;
-}
-
-std::istream& operator>>(std::istream& is, flat::FlatMesh& mesh) {
-  size_t sp_dim, nodes_el;
-
-  is >> sp_dim;
-  is >> nodes_el;
-  if (sp_dim != 3 || nodes_el != 3) {
-    is.clear(std::ios::failbit);
-    return is;
-  }
-
-  size_t total_nodes;
-  is >> total_nodes;
-
-  std::vector<Point3> nodes(total_nodes);
-  for (size_t i = 0; i < total_nodes; ++i)
-    is >> nodes[i];
-
-  size_t total_edges;
-  is >> total_edges;
-
-  std::vector<IndexTriangle> edges(total_edges, IndexTriangle(0, 0, 0));
-  for (size_t i = 0; i < total_edges; ++i)
-    is >> edges[i];
-
-  mesh.setMesh(nodes, edges);
-
-  return is;
 }
