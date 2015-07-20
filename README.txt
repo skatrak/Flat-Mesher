@@ -1,7 +1,6 @@
 Compilation steps:
   cd build
-  CXX='g++ -std=c++11 -fopenmp' cmake ..
+  cmake ..
   make
 
-Execution (from the "build" directory):
-  ./FlatMesher ../test/test1.flat mesh.txt
+You will obtain a static library.
