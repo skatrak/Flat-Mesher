@@ -10,14 +10,19 @@ greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
 TARGET = FlatMesherGUI
 TEMPLATE = app
+CONFIG += c++11
 
 SOURCES += src/Main.cpp\
         src/MainWindow.cpp \
-    src/CollapsibleWidget.cpp
+    src/CollapsibleWidget.cpp \
+    src/FileManager.cpp \
+    src/ViewportControls.cpp
 
 HEADERS  += include/MainWindow.h \
     include/CollapsibleWidget.h \
-    include/Configuration.h
+    include/Configuration.h \
+    include/FileManager.h \
+    include/ViewportControls.h
 
 LIBS += -L"$$_PRO_FILE_PWD_/libs/" -lFlatMesher
 

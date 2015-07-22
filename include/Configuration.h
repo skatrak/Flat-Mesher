@@ -3,7 +3,7 @@
 
 namespace config {
 
-static const int HEADER_FONT_SZ = 12;
+static const int HEADER_FONT_SZ = 10;
 
 static const double MIN_TRIANGLE_SZ = 0.05;
 static const double MAX_TRIANGLE_SZ = 50.0;

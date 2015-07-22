@@ -3,24 +3,166 @@
 
 #include "CollapsibleWidget.h"
 #include "Configuration.h"
+#include "FileManager.h"
+#include "ViewportControls.h"
+
+#include <FlatMesher/FlatMesh.h>
+#include <FlatMesher/FloorPlan.h>
 
 #include <QActionGroup>
 #include <QDoubleSpinBox>
 #include <QGridLayout>
 #include <QLabel>
+#include <QMessageBox>
 #include <QPushButton>
 #include <QWidget>
 
 MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
+  ui->actionClose->setEnabled(false);
 
   createToolbarActions();
   createPropertiesSidebar();
   createStatusBar();
+
+  connect(ui->actionNew, SIGNAL(triggered()), this, SLOT(newFlat()));
+  connect(ui->actionOpen, SIGNAL(triggered()), this, SLOT(openFlat()));
+  connect(ui->actionClose, SIGNAL(triggered()), this, SLOT(closeFlat()));
+  connect(ui->actionCloseAll, SIGNAL(triggered()), this, SLOT(closeAllFlats()));
+  connect(ui->actionSave, SIGNAL(triggered()), this, SLOT(saveFlat()));
+  connect(ui->actionSaveAs, SIGNAL(triggered()), this, SLOT(saveFlatAs()));
+  connect(ui->actionSaveAll, SIGNAL(triggered()), this, SLOT(saveAllFlats()));
+  connect(ui->actionExport, SIGNAL(triggered()), this, SLOT(exportMesh()));
+  connect(ui->actionUndo, SIGNAL(triggered()), this, SLOT(undo()));
+  connect(ui->actionRedo, SIGNAL(triggered()), this, SLOT(redo()));
+  connect(ui->actionFindProblems, SIGNAL(triggered()), this, SLOT(findProblems()));
+  connect(ui->actionAbout, SIGNAL(triggered()), this, SLOT(about()));
+  connect(mToolActions, SIGNAL(triggered(QAction*)), this, SLOT(toolChanged(QAction*)));
 }
 
 MainWindow::~MainWindow() {
   delete ui;
+}
+
+void MainWindow::newFlat() {
+  // TODO Change for graphics widget
+  ui->planSet->addTab(new QWidget(this), tr("<unnamed>"));
+  ui->planSet->setCurrentIndex(ui->planSet->count() - 1);
+
+  ui->actionClose->setEnabled(true);
+}
+
+void MainWindow::openFlat() {
+  flat::FloorPlan plan;
+  QString fileName = FileManager::openFlat(plan);
+
+  if (!fileName.isNull()) {
+    QString file = fileName.section('/', -1);
+    // TODO Change for graphics widget (needs fileName to compare)
+    // If it exists, only swap the current tab
+    ui->planSet->addTab(new QWidget(this), file);
+    ui->planSet->setCurrentIndex(ui->planSet->count() - 1);
+
+    ui->actionClose->setEnabled(true);
+  }
+}
+
+void MainWindow::closeFlat() {
+  if (ui->planSet->count() > 0) {
+    // TODO Save if it has been modified
+    ui->planSet->removeTab(ui->planSet->currentIndex());
+
+    if (ui->planSet->count() == 0)
+      ui->actionClose->setEnabled(false);
+  }
+}
+
+void MainWindow::closeAllFlats() {
+  while (ui->planSet->count() > 0) {
+    // TODO Save if it has been modified
+    ui->planSet->removeTab(0);
+  }
+
+  ui->actionClose->setEnabled(false);
+}
+
+void MainWindow::saveFlat() {
+
+}
+
+void MainWindow::saveFlatAs() {
+  // TODO Extract the FloorPlan from the current graphics widget
+  flat::FloorPlan plan;
+
+  // TODO In saveFlat() it has to be checked whether it is representing an
+  // TODO existing file or not
+  QString fileName = FileManager::saveFlat(plan);
+  if (!fileName.isNull()) {
+    QString file = fileName.section('/', -1);
+    ui->planSet->tabBar()->setTabText(ui->planSet->currentIndex(), file);
+  }
+}
+
+void MainWindow::saveAllFlats() {
+
+}
+
+void MainWindow::exportMesh() {
+
+}
+
+void MainWindow::undo() {
+
+}
+
+void MainWindow::redo() {
+
+}
+
+void MainWindow::toolChanged(QAction *toolAction) {
+  bool selection = false;
+  Qt::CursorShape cursor = Qt::ArrowCursor;
+
+  if (toolAction == mActionSelectionTool) {
+    mCurrentMode = SelectionMode::Selection;
+    selection = true;
+  }
+  else if (toolAction == mActionHandTool) {
+    mCurrentMode = SelectionMode::Hand;
+    cursor = Qt::OpenHandCursor;
+  }
+  else if (toolAction == mActionAddTool) {
+    mCurrentMode = SelectionMode::AddPoints;
+    cursor = Qt::CrossCursor;
+  }
+
+  ui->planSet->setCursor(cursor);
+  mSelectionCollapsible->setVisible(selection);
+}
+
+void MainWindow::findProblems() {
+  // TODO Extend the library to test everything and return all problems found
+}
+
+void MainWindow::about() {
+  QMessageBox::about(this, tr("About"),
+                     tr("<b>FlatMesher</b><tr/>"
+                        "Version 0.1. Copyright Sergio M. Afonso Fumero 2015"));
+}
+
+void MainWindow::generalApplyClicked() {
+  emit changeGeneralProperties(mTriangleSz->value(), mWallsHeight->value());
+}
+
+void MainWindow::viewportApplyClicked() {
+  double minX = mViewport->minX(), maxX = mViewport->maxX();
+  double minY = mViewport->minY(), maxY = mViewport->maxY();
+
+  emit changeViewPort(QRectF(minX, maxY, maxX - minX, maxY - minY));
+}
+
+void MainWindow::selectionApplyClicked() {
+  emit moveSelectedPoint(QPointF(mPointX->value(), mPointY->value()));
 }
 
 void MainWindow::createToolbarActions() {
@@ -76,7 +218,8 @@ void MainWindow::createPropertiesSidebar() {
   QPushButton *generalApply = new QPushButton(tr("Apply"), general);
   layout->addWidget(generalApply, 2, 1, 1, 1);
 
-  // TODO Connect generalApply
+  // Connect generalApply
+  connect(generalApply, SIGNAL(clicked()), this, SLOT(generalApplyClicked()));
 
   ui->propertiesWidget->layout()->addWidget(new CollapsibleWidget(tr("Properties"), general, this));
 
@@ -86,34 +229,8 @@ void MainWindow::createPropertiesSidebar() {
   layout = new QGridLayout(viewport);
   layout->setMargin(0);
 
-  layout->addWidget(new QLabel(tr("Min. X"), viewport), 0, 0, 1, 1);
-  layout->addWidget(new QLabel(tr("Max. X"), viewport), 0, 2, 1, 1);
-  layout->addWidget(new QLabel(tr("Min. Y"), viewport), 1, 0, 1, 1);
-  layout->addWidget(new QLabel(tr("Max. Y"), viewport), 1, 2, 1, 1);
-
-  mMinX = new QDoubleSpinBox(viewport);
-  mMinX->setRange(config::VIEWPORT_MIN_X, config::VIEWPORT_MAX_X);
-  mMinX->setSingleStep(config::DELTA_TRIANGLE_SZ);
-  mMinX->setValue(config::DEFAULT_VIEWPORT_MIN_X);
-  layout->addWidget(mMinX, 0, 1, 1, 1);
-
-  mMaxX = new QDoubleSpinBox(viewport);
-  mMaxX->setRange(config::VIEWPORT_MIN_X, config::VIEWPORT_MAX_X);
-  mMaxX->setSingleStep(config::DELTA_TRIANGLE_SZ);
-  mMaxX->setValue(config::DEFAULT_VIEWPORT_MAX_X);
-  layout->addWidget(mMaxX, 0, 3, 1, 1);
-
-  mMinY = new QDoubleSpinBox(viewport);
-  mMinY->setRange(config::VIEWPORT_MIN_Y, config::VIEWPORT_MAX_Y);
-  mMinY->setSingleStep(config::DELTA_TRIANGLE_SZ);
-  mMinY->setValue(config::DEFAULT_VIEWPORT_MIN_Y);
-  layout->addWidget(mMinY, 1, 1, 1, 1);
-
-  mMaxY = new QDoubleSpinBox(viewport);
-  mMaxY->setRange(config::VIEWPORT_MIN_Y, config::VIEWPORT_MAX_Y);
-  mMaxY->setSingleStep(config::DELTA_TRIANGLE_SZ);
-  mMaxY->setValue(config::DEFAULT_VIEWPORT_MAX_Y);
-  layout->addWidget(mMaxY, 1, 3, 1, 1);
+  mViewport = new ViewportControls(viewport);
+  layout->addWidget(mViewport, 0, 0, 2, 4);
 
   QPushButton *viewportReset = new QPushButton(tr("Reset"), viewport);
   layout->addWidget(viewportReset, 2, 0, 1, 2);
@@ -121,7 +238,9 @@ void MainWindow::createPropertiesSidebar() {
   QPushButton *viewportApply = new QPushButton(tr("Apply"), viewport);
   layout->addWidget(viewportApply, 2, 2, 1, 2);
 
-  // TODO Connect viewportReset & viewportApply
+  // Connect viewportReset & viewportApply
+  connect(viewportReset, SIGNAL(clicked()), this, SIGNAL(resetViewPort()));
+  connect(viewportApply, SIGNAL(clicked()), this, SLOT(viewportApplyClicked()));
 
   ui->propertiesWidget->layout()->addWidget(new CollapsibleWidget(tr("Viewport"), viewport, this));
 
@@ -151,10 +270,15 @@ void MainWindow::createPropertiesSidebar() {
   mPointY->setValue(0.0);
   layout->addWidget(mPointY, 0, 3, 1, 1);
 
-  QPushButton *selectionDelete = new QPushButton(tr("Delete point/s"), mSelectionPoint);
-  layout->addWidget(selectionDelete, 1, 2, 1, 2);
+  QPushButton *selectionApply = new QPushButton(tr("Apply"), mSelectionPoint);
+  layout->addWidget(selectionApply, 1, 2, 1, 2);
 
-  // TODO Connect selectionDelete
+  QPushButton *selectionDelete = new QPushButton(tr("Delete point/s"), mSelectionPoint);
+  layout->addWidget(selectionDelete, 1, 0, 1, 2);
+
+  // Connect selectionApply & selectionDelete
+  connect(selectionApply, SIGNAL(clicked()), this, SLOT(selectionApplyClicked()));
+  connect(selectionDelete, SIGNAL(clicked()), this, SIGNAL(deleteSelectedPoints()));
 
   // Selection options (Lines)
   mSelectionLine = new QWidget(this);
@@ -169,7 +293,11 @@ void MainWindow::createPropertiesSidebar() {
   layout->addWidget(mLineLength, 0, 0, 1, 1);
   layout->addWidget(mLineSlope, 0, 1, 1, 1);
 
-  //mSelectionCollapsible->setContent(mSelectionPoint);
+  QPushButton *selectionSplitLine = new QPushButton(tr("Split line"), mSelectionLine);
+  layout->addWidget(selectionSplitLine, 1, 1, 1, 1);
+
+  // Connect selectionSplitLine
+  connect(selectionSplitLine, SIGNAL(clicked()), this, SIGNAL(splitLine()));
 }
 
 void MainWindow::createStatusBar() {
