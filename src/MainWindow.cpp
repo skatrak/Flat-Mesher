@@ -4,6 +4,7 @@
 #include "CollapsibleWidget.h"
 #include "Configuration.h"
 #include "FileManager.h"
+#include "MeshEditor.h"
 #include "ViewportControls.h"
 
 #include <FlatMesher/FlatMesh.h>
@@ -15,11 +16,18 @@
 #include <QLabel>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QUndoGroup>
+#include <QUndoStack>
 #include <QWidget>
 
 MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWindow) {
   ui->setupUi(this);
   ui->actionClose->setEnabled(false);
+
+  mUndoGroup = new QUndoGroup(this);
+  ui->menuEdit->addSeparator();
+  ui->menuEdit->addAction(mUndoGroup->createUndoAction(this));
+  ui->menuEdit->addAction(mUndoGroup->createRedoAction(this));
 
   createToolbarActions();
   createPropertiesSidebar();
@@ -37,6 +45,8 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
   connect(ui->actionRedo, SIGNAL(triggered()), this, SLOT(redo()));
   connect(ui->actionFindProblems, SIGNAL(triggered()), this, SLOT(findProblems()));
   connect(ui->actionAbout, SIGNAL(triggered()), this, SLOT(about()));
+  connect(ui->planSet, SIGNAL(currentChanged(int)), this, SLOT(tabChanged(int)));
+
   connect(mToolActions, SIGNAL(triggered(QAction*)), this, SLOT(toolChanged(QAction*)));
 }
 
@@ -45,8 +55,7 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::newFlat() {
-  // TODO Change for graphics widget
-  ui->planSet->addTab(new QWidget(this), tr("<unnamed>"));
+  ui->planSet->addTab(new MeshEditor(this), tr("<unnamed>"));
   ui->planSet->setCurrentIndex(ui->planSet->count() - 1);
 
   ui->actionClose->setEnabled(true);
@@ -58,9 +67,8 @@ void MainWindow::openFlat() {
 
   if (!fileName.isNull()) {
     QString file = fileName.section('/', -1);
-    // TODO Change for graphics widget (needs fileName to compare)
-    // If it exists, only swap the current tab
-    ui->planSet->addTab(new QWidget(this), file);
+    // TODO If it exists, only swap the current tab (ask if user wants to replace)
+    ui->planSet->addTab(new MeshEditor(fileName, plan, this), file);
     ui->planSet->setCurrentIndex(ui->planSet->count() - 1);
 
     ui->actionClose->setEnabled(true);
@@ -69,7 +77,10 @@ void MainWindow::openFlat() {
 
 void MainWindow::closeFlat() {
   if (ui->planSet->count() > 0) {
-    // TODO Save if it has been modified
+    // TODO Ask first, and only if an editor is selected
+    if (!mCurrentEditor->undoStack()->isClean())
+      FileManager::saveFlat(mCurrentEditor->plan(), mCurrentEditor->fileName());
+
     ui->planSet->removeTab(ui->planSet->currentIndex());
 
     if (ui->planSet->count() == 0)
@@ -91,8 +102,9 @@ void MainWindow::saveFlat() {
 }
 
 void MainWindow::saveFlatAs() {
+  // TODO Only when an editor is selected
   // TODO Extract the FloorPlan from the current graphics widget
-  flat::FloorPlan plan;
+  flat::FloorPlan plan = mCurrentEditor->plan();
 
   // TODO In saveFlat() it has to be checked whether it is representing an
   // TODO existing file or not
@@ -108,9 +120,11 @@ void MainWindow::saveAllFlats() {
 }
 
 void MainWindow::exportMesh() {
-
+  // TODO Only when an editor is selected
+  FileManager::saveMesh(mCurrentEditor->mesh());
 }
 
+// TODO Change for the provided ones
 void MainWindow::undo() {
 
 }
@@ -121,6 +135,7 @@ void MainWindow::redo() {
 
 void MainWindow::toolChanged(QAction *toolAction) {
   bool selection = false;
+  SelectionMode prevMode = mCurrentMode;
   Qt::CursorShape cursor = Qt::ArrowCursor;
 
   if (toolAction == mActionSelectionTool) {
@@ -129,7 +144,6 @@ void MainWindow::toolChanged(QAction *toolAction) {
   }
   else if (toolAction == mActionHandTool) {
     mCurrentMode = SelectionMode::Hand;
-    cursor = Qt::OpenHandCursor;
   }
   else if (toolAction == mActionAddTool) {
     mCurrentMode = SelectionMode::AddPoints;
@@ -138,6 +152,9 @@ void MainWindow::toolChanged(QAction *toolAction) {
 
   ui->planSet->setCursor(cursor);
   mSelectionCollapsible->setVisible(selection);
+
+  if (prevMode != mCurrentMode)
+    emit changeMode(mCurrentMode);
 }
 
 void MainWindow::findProblems() {
@@ -147,7 +164,7 @@ void MainWindow::findProblems() {
 void MainWindow::about() {
   QMessageBox::about(this, tr("About"),
                      tr("<b>FlatMesher</b><tr/>"
-                        "Version 0.1. Copyright Sergio M. Afonso Fumero 2015"));
+                        "Version %1. Copyright Sergio M. Afonso Fumero 2015").arg(config::VERSION_STRING));
 }
 
 void MainWindow::generalApplyClicked() {
@@ -158,11 +175,23 @@ void MainWindow::viewportApplyClicked() {
   double minX = mViewport->minX(), maxX = mViewport->maxX();
   double minY = mViewport->minY(), maxY = mViewport->maxY();
 
-  emit changeViewPort(QRectF(minX, maxY, maxX - minX, maxY - minY));
+  emit changeViewPort(flat::Rectangle(maxY, minY, minX, maxX));
 }
 
 void MainWindow::selectionApplyClicked() {
-  emit moveSelectedPoint(QPointF(mPointX->value(), mPointY->value()));
+  emit moveSelectedPoint(flat::Point2(mPointX->value(), mPointY->value()));
+}
+
+void MainWindow::tabChanged(int tabIndex) {
+  if (tabIndex >= 0) {
+    mCurrentEditor = dynamic_cast<MeshEditor*>(ui->planSet->widget(tabIndex));
+    mUndoGroup->setActiveStack(mCurrentEditor->undoStack());
+    // TODO Update actions?
+  }
+  else {
+    mCurrentEditor = nullptr;
+    mUndoGroup->setActiveStack(nullptr);
+  }
 }
 
 void MainWindow::createToolbarActions() {

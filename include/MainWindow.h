@@ -3,21 +3,24 @@
 
 #include <QMainWindow>
 
+#include "SelectionMode.h"
+
 namespace Ui {
 class MainWindow;
 }
 
+namespace flat {
+class Point2;
+class Rectangle;
+}
+
 class CollapsibleWidget;
+class MeshEditor;
 class QActionGroup;
 class QDoubleSpinBox;
 class QLabel;
+class QUndoGroup;
 class ViewportControls;
-
-enum class SelectionMode {
-  Selection,
-  Hand,
-  AddPoints
-};
 
 class MainWindow: public QMainWindow {
   Q_OBJECT
@@ -55,14 +58,16 @@ private slots:
   void generalApplyClicked();
   void viewportApplyClicked();
   void selectionApplyClicked();
+  void tabChanged(int tabIndex);
 
 signals:
   void changeGeneralProperties(double triangleSize, double wallsHeight);
-  void changeViewPort(const QRectF& viewport);
-  void moveSelectedPoint(const QPointF& point);
+  void changeViewPort(const flat::Rectangle& viewport);
+  void moveSelectedPoint(const flat::Point2& point);
   void resetViewPort();
   void deleteSelectedPoints();
   void splitLine();
+  void changeMode(SelectionMode mode);
 
 private:
   void createToolbarActions();
@@ -71,6 +76,8 @@ private:
 
   Ui::MainWindow *ui;
 
+  QUndoGroup *mUndoGroup;
+  MeshEditor *mCurrentEditor;
   SelectionMode mCurrentMode;
 
   // Toolbox actions
