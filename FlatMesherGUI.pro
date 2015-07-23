@@ -16,15 +16,23 @@ SOURCES += src/Main.cpp\
         src/MainWindow.cpp \
     src/CollapsibleWidget.cpp \
     src/FileManager.cpp \
-    src/ViewportControls.cpp
+    src/ViewportControls.cpp \
+    src/MeshEditor.cpp \
+    src/Configuration.cpp \
+    src/GridGraphicsView.cpp
 
 HEADERS  += include/MainWindow.h \
     include/CollapsibleWidget.h \
     include/Configuration.h \
     include/FileManager.h \
-    include/ViewportControls.h
+    include/ViewportControls.h \
+    include/SelectionMode.h \
+    include/MeshEditor.h \
+    include/GridGraphicsView.h
 
-LIBS += -L"$$_PRO_FILE_PWD_/libs/" -lFlatMesher
+QMAKE_CXXFLAGS += -fopenmp
+
+LIBS += -fopenmp -L"$$_PRO_FILE_PWD_/libs/" -lFlatMesher
 
 INCLUDEPATH += include\
         ../FlatMesher/include
