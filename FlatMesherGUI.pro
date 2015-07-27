@@ -28,7 +28,8 @@ HEADERS  += include/MainWindow.h \
     include/ViewportControls.h \
     include/SelectionMode.h \
     include/MeshEditor.h \
-    include/GridGraphicsView.h
+    include/GridGraphicsView.h \
+    include/SelectedItems.h
 
 QMAKE_CXXFLAGS += -fopenmp
 
