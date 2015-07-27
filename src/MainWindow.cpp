@@ -20,34 +20,20 @@
 #include <QUndoStack>
 #include <QWidget>
 
-MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWindow) {
+MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWindow),
+    mCurrentEditor(nullptr), mCurrentMode(SelectionMode::Selection) {
   ui->setupUi(this);
-  ui->actionClose->setEnabled(false);
 
-  mUndoGroup = new QUndoGroup(this);
-  ui->menuEdit->addSeparator();
-  ui->menuEdit->addAction(mUndoGroup->createUndoAction(this));
-  ui->menuEdit->addAction(mUndoGroup->createRedoAction(this));
+  setupActions();
+  setupPropertiesSidebar();
+  setupStatusBar();
 
-  createToolbarActions();
-  createPropertiesSidebar();
-  createStatusBar();
-
-  connect(ui->actionNew, SIGNAL(triggered()), this, SLOT(newFlat()));
-  connect(ui->actionOpen, SIGNAL(triggered()), this, SLOT(openFlat()));
-  connect(ui->actionClose, SIGNAL(triggered()), this, SLOT(closeFlat()));
-  connect(ui->actionCloseAll, SIGNAL(triggered()), this, SLOT(closeAllFlats()));
-  connect(ui->actionSave, SIGNAL(triggered()), this, SLOT(saveFlat()));
-  connect(ui->actionSaveAs, SIGNAL(triggered()), this, SLOT(saveFlatAs()));
-  connect(ui->actionSaveAll, SIGNAL(triggered()), this, SLOT(saveAllFlats()));
-  connect(ui->actionExport, SIGNAL(triggered()), this, SLOT(exportMesh()));
-  connect(ui->actionUndo, SIGNAL(triggered()), this, SLOT(undo()));
-  connect(ui->actionRedo, SIGNAL(triggered()), this, SLOT(redo()));
-  connect(ui->actionFindProblems, SIGNAL(triggered()), this, SLOT(findProblems()));
-  connect(ui->actionAbout, SIGNAL(triggered()), this, SLOT(about()));
-  connect(ui->planSet, SIGNAL(currentChanged(int)), this, SLOT(tabChanged(int)));
-
-  connect(mToolActions, SIGNAL(triggered(QAction*)), this, SLOT(toolChanged(QAction*)));
+  ui->splitter->setSizes(QList<int>{ui->planSet->width(),
+                                    ui->propertiesWidget->sizeHint().width() +
+                                    ui->splitter->handleWidth() / 2});
+  ui->splitter->setCollapsible(0, false);
+  ui->splitter->setStretchFactor(0, 1);
+  ui->splitter->setStretchFactor(1, 0);
 }
 
 MainWindow::~MainWindow() {
@@ -55,10 +41,12 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::newFlat() {
-  ui->planSet->addTab(new MeshEditor(this), tr("<unnamed>"));
-  ui->planSet->setCurrentIndex(ui->planSet->count() - 1);
+  MeshEditor *editor = new MeshEditor();
+  editor->layout()->setContentsMargins(0 ,0, 0, 0);
+  editor->setGridVisible(ui->actionShowGrid->isChecked());
 
-  ui->actionClose->setEnabled(true);
+  int index = ui->planSet->addTab(editor, tr("<unnamed>"));
+  ui->planSet->setCurrentIndex(index);
 }
 
 void MainWindow::openFlat() {
@@ -67,70 +55,80 @@ void MainWindow::openFlat() {
 
   if (!fileName.isNull()) {
     QString file = fileName.section('/', -1);
-    // TODO If it exists, only swap the current tab (ask if user wants to replace)
-    ui->planSet->addTab(new MeshEditor(fileName, plan, this), file);
-    ui->planSet->setCurrentIndex(ui->planSet->count() - 1);
+    // If it is loaded, only swap the current tab
+    int tabIndex = findOpenFile(fileName);
+    if (tabIndex < 0) {
+      MeshEditor *editor = new MeshEditor(fileName, plan, this);
+      editor->layout()->setContentsMargins(0, 0, 0, 0);
+      editor->setGridVisible(ui->actionShowGrid->isChecked());
 
-    ui->actionClose->setEnabled(true);
+      int index = ui->planSet->addTab(editor, file);
+      ui->planSet->setCurrentIndex(index);
+    }
+    else {
+      // Ask if user wants to replace unsaved data
+      ui->planSet->setCurrentIndex(tabIndex);
+      if (!mCurrentEditor->isSaved()) {
+        int response = QMessageBox::question(this, tr("Replace changes"),
+                                             tr("The current model has unsaved changes. Do you want to reload the model? All changes will be lost"),
+                                             QMessageBox::Yes | QMessageBox::No,
+                                             QMessageBox::No);
+        if (response == QMessageBox::Yes)
+          mCurrentEditor->loadPlan(plan);
+      }
+    }
   }
 }
 
 void MainWindow::closeFlat() {
   if (ui->planSet->count() > 0) {
-    // TODO Ask first, and only if an editor is selected
-    if (!mCurrentEditor->undoStack()->isClean())
-      FileManager::saveFlat(mCurrentEditor->plan(), mCurrentEditor->fileName());
+    if (!mCurrentEditor->isSaved()) {
+      int response = QMessageBox::question(this, tr("Save changes"),
+                                           tr("The current model has unsaved changes. Do you want to save it?"),
+                                           QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel,
+                                           QMessageBox::Save);
+      switch (response) {
+      case QMessageBox::Cancel:
+        return;
+      case QMessageBox::Save:
+        FileManager::saveFlat(mCurrentEditor->plan(), mCurrentEditor->fileName());
+      }
+    }
 
     ui->planSet->removeTab(ui->planSet->currentIndex());
-
-    if (ui->planSet->count() == 0)
-      ui->actionClose->setEnabled(false);
   }
 }
 
 void MainWindow::closeAllFlats() {
-  while (ui->planSet->count() > 0) {
-    // TODO Save if it has been modified
-    ui->planSet->removeTab(0);
-  }
-
-  ui->actionClose->setEnabled(false);
+  while (ui->planSet->count() > 0)
+    closeFlat();
 }
 
 void MainWindow::saveFlat() {
-
+  saveEditorModel(ui->planSet->currentIndex());
 }
 
 void MainWindow::saveFlatAs() {
-  // TODO Only when an editor is selected
-  // TODO Extract the FloorPlan from the current graphics widget
-  flat::FloorPlan plan = mCurrentEditor->plan();
+  if (mCurrentEditor != nullptr) {
+    flat::FloorPlan plan = mCurrentEditor->plan();
 
-  // TODO In saveFlat() it has to be checked whether it is representing an
-  // TODO existing file or not
-  QString fileName = FileManager::saveFlat(plan);
-  if (!fileName.isNull()) {
-    QString file = fileName.section('/', -1);
-    ui->planSet->tabBar()->setTabText(ui->planSet->currentIndex(), file);
+    QString fileName = FileManager::saveFlat(plan);
+    if (!fileName.isNull()) {
+      QString file = fileName.section('/', -1);
+      ui->planSet->tabBar()->setTabText(ui->planSet->currentIndex(), file);
+    }
   }
 }
 
 void MainWindow::saveAllFlats() {
-
+  for (int i = 0; i < ui->planSet->count(); ++i)
+    saveEditorModel(i);
 }
 
 void MainWindow::exportMesh() {
   // TODO Only when an editor is selected
-  FileManager::saveMesh(mCurrentEditor->mesh());
-}
-
-// TODO Change for the provided ones
-void MainWindow::undo() {
-
-}
-
-void MainWindow::redo() {
-
+  if (mCurrentEditor != nullptr)
+    FileManager::saveMesh(mCurrentEditor->mesh());
 }
 
 void MainWindow::toolChanged(QAction *toolAction) {
@@ -153,8 +151,8 @@ void MainWindow::toolChanged(QAction *toolAction) {
   ui->planSet->setCursor(cursor);
   mSelectionCollapsible->setVisible(selection);
 
-  if (prevMode != mCurrentMode)
-    emit changeMode(mCurrentMode);
+  if (prevMode != mCurrentMode && mCurrentEditor != nullptr)
+    mCurrentEditor->setSelectionMode(mCurrentMode);
 }
 
 void MainWindow::findProblems() {
@@ -167,43 +165,225 @@ void MainWindow::about() {
                         "Version %1. Copyright Sergio M. Afonso Fumero 2015").arg(config::VERSION_STRING));
 }
 
-void MainWindow::generalApplyClicked() {
-  emit changeGeneralProperties(mTriangleSz->value(), mWallsHeight->value());
+void MainWindow::onCursorMoved(const flat::Point2& pos) {
+  mCursorPos->setText(tr("(X = %1, Y = %2)").arg(pos.getX(), 0, 'g', 2).arg(pos.getY(), 0, 'g', 2));
 }
 
-void MainWindow::viewportApplyClicked() {
-  double minX = mViewport->minX(), maxX = mViewport->maxX();
-  double minY = mViewport->minY(), maxY = mViewport->maxY();
-
-  emit changeViewPort(flat::Rectangle(maxY, minY, minX, maxX));
+void MainWindow::onViewportChanged(const flat::Rectangle& viewport) {
+  emit changeViewport(viewport);
 }
 
-void MainWindow::selectionApplyClicked() {
-  emit moveSelectedPoint(flat::Point2(mPointX->value(), mPointY->value()));
+// FIXME This is not being called
+void MainWindow::onPointsAmountChanged(int /*diff*/) {
+  mElementCounter->setText(tr("%1 elements").arg(mCurrentEditor->pointCount()));
 }
 
-void MainWindow::tabChanged(int tabIndex) {
+void MainWindow::onSelectionChanged(SelectedItems selectionType) {
+  bool pointSelected = false;
+  flat::Point2 point;
+  flat::Line2 line;
+
+  QWidget *previous = mSelectionCollapsible->content();
+  mSelectionCollapsible->setContent(nullptr);
+
+  if (previous)
+    previous->setParent(this);
+
+  switch (selectionType) {
+  case SelectedItems::Point:
+    point = mCurrentEditor->selectedPoint();
+    mPointX->setValue(point.getX());
+    mPointY->setValue(point.getY());
+    pointSelected = true;
+    // fall-through
+  case SelectedItems::PointSet:
+    mSelectionCollapsible->setContent(mSelectionPoint);
+    mPointX->setEnabled(pointSelected);
+    mPointY->setEnabled(pointSelected);
+    mPointMove->setEnabled(pointSelected);
+    break;
+  case SelectedItems::Line:
+    line = mCurrentEditor->selectedLine();
+    mLineLength->setText(tr("Length: %1").arg(line.length(), 0, 'g', 2));
+    mLineSlope->setText(tr("Slope: %1").arg(line.slope(), 0, 'g', 2));
+
+    mSelectionCollapsible->setContent(mSelectionLine);
+    break;
+  }
+}
+
+int MainWindow::findOpenFile(const QString& fileName) const {
+  for (int i = 0; i < ui->planSet->count(); ++i) {
+    MeshEditor *editor = dynamic_cast<MeshEditor*>(ui->planSet->widget(i));
+    if (editor->fileName().compare(fileName) == 0)
+      return i;
+  }
+
+  return -1;
+}
+
+void MainWindow::onTabChanged(int tabIndex) {
+  // Disconnect every signal between the main window and the previous active
+  // editor
+  if (mCurrentEditor != nullptr) {
+    disconnect(this, nullptr, mCurrentEditor, nullptr);
+    disconnect(mCurrentEditor, nullptr, this, nullptr);
+  }
+
   if (tabIndex >= 0) {
     mCurrentEditor = dynamic_cast<MeshEditor*>(ui->planSet->widget(tabIndex));
     mUndoGroup->setActiveStack(mCurrentEditor->undoStack());
-    // TODO Update actions?
+
+    mTriangleSz->setValue(mCurrentEditor->triangleSize());
+    mWallsHeight->setValue(mCurrentEditor->wallsHeight());
+
+    flat::Rectangle viewport = mCurrentEditor->viewport();
+    flat::Point2 tl = viewport.getTopLeft();
+    flat::Point2 lr = viewport.getLowerRight();
+    mViewport->setMinX(tl.getX());
+    mViewport->setMaxX(lr.getX());
+    mViewport->setMinY(lr.getY());
+    mViewport->setMaxY(tl.getY());
+
+    onSelectionChanged(mCurrentEditor->selectionType());
+
+    connect(this, SIGNAL(changeViewport(flat::Rectangle)), mCurrentEditor, SLOT(setViewport(flat::Rectangle)));
+    connect(mCurrentEditor, SIGNAL(cursorMoved(flat::Point2)), this, SLOT(onCursorMoved(flat::Point2)));
+    connect(mCurrentEditor, SIGNAL(viewportChanged(flat::Rectangle)), this, SLOT(onViewportChanged(flat::Rectangle)));
+    connect(mCurrentEditor, SIGNAL(pointsAmountChanged(int)), this, SLOT(onPointsAmountChanged(int)));
+    connect(mCurrentEditor, SIGNAL(selectionChanged(SelectedItems)), this, SLOT(onSelectionChanged(SelectedItems)));
+
+    ui->actionShowGrid->setChecked(mCurrentEditor->isGridVisible());
+    ui->actionSave->setEnabled(true);
+    ui->actionSaveAs->setEnabled(true);
+    ui->actionSaveAll->setEnabled(true);
+    ui->actionExport->setEnabled(true);
+    ui->actionFindProblems->setEnabled(true);
   }
   else {
     mCurrentEditor = nullptr;
     mUndoGroup->setActiveStack(nullptr);
+
+    ui->actionSave->setEnabled(false);
+    ui->actionSaveAs->setEnabled(false);
+    ui->actionSaveAll->setEnabled(false);
+    ui->actionExport->setEnabled(false);
+    ui->actionFindProblems->setEnabled(false);
+
+    resetInputsToDefault();
   }
 }
 
-void MainWindow::createToolbarActions() {
+void MainWindow::onTabClose(int tabIndex) {
+  onTabChanged(tabIndex);
+  closeFlat();
+}
+
+void MainWindow::onGridVisibilityChanged(bool visible) {
+  if (mCurrentEditor != nullptr)
+    mCurrentEditor->setGridVisible(visible);
+}
+
+void MainWindow::onCollapsiblesChange() {
+  // FIXME The size hint of propertiesWidget doesn't change when items are
+  // FIXME collapsed and uncollapsed
+  //ui->splitter->setSizes(QList<int>{ui->planSet->width(),
+  //                                  ui->propertiesWidget->sizeHint().width()+1});
+}
+
+void MainWindow::onGeneralApplyClicked() {
+  if (mCurrentEditor != nullptr) {
+    mCurrentEditor->setTrianglesSize(mTriangleSz->value());
+    mCurrentEditor->setWallsHeight(mWallsHeight->value());
+  }
+}
+
+void MainWindow::onViewportApplyClicked() {
+  if (mCurrentEditor != nullptr) {
+    double minX = mViewport->minX(), maxX = mViewport->maxX();
+    double minY = mViewport->minY(), maxY = mViewport->maxY();
+
+    emit changeViewport(flat::Rectangle(maxY, minY, minX, maxX));
+  }
+}
+
+void MainWindow::onViewportResetClicked() {
+  if (mCurrentEditor != nullptr)
+    mCurrentEditor->adjustViewport();
+}
+
+void MainWindow::onPointMoveClicked() {
+  if (mCurrentEditor != nullptr && mCurrentEditor->selectionType() == SelectedItems::Point)
+    mCurrentEditor->changeSelectedPoint(flat::Point2(mPointX->value(), mPointY->value()));
+}
+
+void MainWindow::onPointDeleteClicked() {
+  if (mCurrentEditor != nullptr) {
+    SelectedItems selType = mCurrentEditor->selectionType();
+    if (selType == SelectedItems::Point || selType == SelectedItems::PointSet)
+      mCurrentEditor->deleteSelectedPoints();
+  }
+}
+
+void MainWindow::onLineSplitClicked() {
+  if (mCurrentEditor != nullptr && mCurrentEditor->selectionType() == SelectedItems::Line)
+    mCurrentEditor->splitSelectedLine();
+}
+
+bool MainWindow::saveEditorModel(int tabIndex) {
+  if (tabIndex >= 0 && tabIndex < ui->planSet->count()) {
+    MeshEditor *editor = dynamic_cast<MeshEditor*>(ui->planSet->widget(tabIndex));
+
+    if (editor && !editor->isSaved()) {
+      flat::FloorPlan plan = editor->plan();
+
+      QString fileName;
+      if (!editor->fileName().isNull()) {
+        fileName = editor->fileName();
+        FileManager::saveFlat(plan, fileName);
+      }
+      else
+        fileName = FileManager::saveFlat(plan);
+
+      if (!fileName.isNull()) {
+        QString file = fileName.section('/', -1);
+        ui->planSet->tabBar()->setTabText(tabIndex, file);
+      }
+    }
+
+    // TODO Check the actual error code from the filemanager
+    return true;
+  }
+
+  return false;
+}
+
+void MainWindow::resetInputsToDefault() {
+  mTriangleSz->setRange(config::MIN_TRIANGLE_SZ, config::MAX_TRIANGLE_SZ);
+  mTriangleSz->setSingleStep(config::DELTA_TRIANGLE_SZ);
+  mTriangleSz->setValue(config::DEFAULT_TRIANGLE_SZ);
+
+  mWallsHeight->setRange(config::MIN_WALLS_HEIGHT, config::MAX_WALLS_HEIGHT);
+  mWallsHeight->setSingleStep(config::DELTA_WALLS_HEIGHT);
+  mWallsHeight->setValue(config::DEFAULT_WALLS_HEIGHT);
+
+  mPointX->setRange(config::VIEWPORT_MIN_X, config::VIEWPORT_MAX_X);
+  mPointX->setSingleStep(config::DELTA_TRIANGLE_SZ);
+  mPointX->setValue(0.0);
+
+  mPointY->setRange(config::VIEWPORT_MIN_Y, config::VIEWPORT_MAX_Y);
+  mPointY->setSingleStep(config::DELTA_TRIANGLE_SZ);
+  mPointY->setValue(0.0);
+
+  mViewport->resetInputsToDefault();
+}
+
+void MainWindow::setupActions() {
   mToolActions = new QActionGroup(this);
   mActionSelectionTool = new QAction(QPixmap(":/img/cursor-arrow.png"), tr("Selection tool"), this);
   mActionHandTool = new QAction(QPixmap(":/img/cursor-openhand.png"), tr("Hand tool"), this);
   mActionAddTool = new QAction(QPixmap(":/img/cursor-cross.png"), tr("Points addition tool"), this);
   mActionFindProblems = new QAction(tr("Find problems..."), this);
-
-  mActionSelectionTool->setShortcut(Qt::Key_S);
-  mActionHandTool->setShortcut(Qt::Key_D);
-  mActionAddTool->setShortcut(Qt::Key_F);
 
   mActionSelectionTool->setCheckable(true);
   mActionSelectionTool->setChecked(true);
@@ -220,118 +400,150 @@ void MainWindow::createToolbarActions() {
 
   ui->menuTools->addSeparator();
   ui->menuTools->addAction(mActionFindProblems);
+
+  mUndoGroup = new QUndoGroup(this);
+  QAction *undoAction = mUndoGroup->createUndoAction(this);
+  QAction *redoAction = mUndoGroup->createRedoAction(this);
+
+  undoAction->setIcon(QPixmap(":/img/undo.png"));
+  undoAction->setShortcut(QKeySequence::Undo);
+  redoAction->setIcon(QPixmap(":/img/redo.png"));
+  redoAction->setShortcut(QKeySequence::Redo);
+
+  ui->menuEdit->addAction(undoAction);
+  ui->menuEdit->addAction(redoAction);
+
+  ui->toolBar->addSeparator();
+  ui->toolBar->addAction(undoAction);
+  ui->toolBar->addAction(redoAction);
+
+  ui->actionNew->setShortcut(QKeySequence::New);
+  ui->actionOpen->setShortcut(QKeySequence::Open);
+  ui->actionClose->setShortcut(QKeySequence::Close);
+  ui->actionSave->setShortcut(QKeySequence::Save);
+  ui->actionSaveAs->setShortcut(QKeySequence::SaveAs);
+  ui->actionExit->setShortcut(QKeySequence::Quit);
+
+  undoAction->setShortcut(QKeySequence::Undo);
+  redoAction->setShortcut(QKeySequence::Redo);
+
+  mActionSelectionTool->setShortcut(Qt::Key_S);
+  mActionHandTool->setShortcut(Qt::Key_D);
+  mActionAddTool->setShortcut(Qt::Key_F);
+
+  connect(ui->actionNew,          SIGNAL(triggered()),            this, SLOT(newFlat()));
+  connect(ui->actionOpen,         SIGNAL(triggered()),            this, SLOT(openFlat()));
+  connect(ui->actionClose,        SIGNAL(triggered()),            this, SLOT(closeFlat()));
+  connect(ui->actionCloseAll,     SIGNAL(triggered()),            this, SLOT(closeAllFlats()));
+  connect(ui->actionSave,         SIGNAL(triggered()),            this, SLOT(saveFlat()));
+  connect(ui->actionSaveAs,       SIGNAL(triggered()),            this, SLOT(saveFlatAs()));
+  connect(ui->actionSaveAll,      SIGNAL(triggered()),            this, SLOT(saveAllFlats()));
+  connect(ui->actionExport,       SIGNAL(triggered()),            this, SLOT(exportMesh()));
+  connect(ui->actionExit,         SIGNAL(triggered()),            this, SLOT(close()));
+  connect(ui->actionFindProblems, SIGNAL(triggered()),            this, SLOT(findProblems()));
+  connect(ui->actionShowGrid,     SIGNAL(toggled(bool)),          this, SLOT(onGridVisibilityChanged(bool)));
+  connect(ui->actionAbout,        SIGNAL(triggered()),            this, SLOT(about()));
+  connect(ui->planSet,            SIGNAL(currentChanged(int)),    this, SLOT(onTabChanged(int)));
+  connect(ui->planSet,            SIGNAL(tabCloseRequested(int)), this, SLOT(onTabClose(int)));
+  connect(mToolActions,           SIGNAL(triggered(QAction*)),    this, SLOT(toolChanged(QAction*)));
 }
 
-void MainWindow::createPropertiesSidebar() {
+void MainWindow::setupPropertiesSidebar() {
   // General options
   QWidget *general = new QWidget(this);
 
+  mTriangleSz = new QDoubleSpinBox(general);
+  mWallsHeight = new QDoubleSpinBox(general);
+  QLabel *triangleLabel = new QLabel(tr("Triangle size"), general);
+  QLabel *wallsLabel = new QLabel(tr("Walls height"), general);
+  QPushButton *generalApply = new QPushButton(tr("Apply"), general);
+
   QGridLayout *layout = new QGridLayout(general);
   layout->setMargin(0);
+  layout->addWidget(triangleLabel, 0, 0, 1, 1);
+  layout->addWidget(wallsLabel,    1, 0, 1, 1);
+  layout->addWidget(mTriangleSz,   0, 1, 1, 1);
+  layout->addWidget(mWallsHeight,  1, 1, 1, 1);
+  layout->addWidget(generalApply,  2, 0, 1, 1);
 
-  layout->addWidget(new QLabel(tr("Triangle size"), general), 0, 0, 1, 1);
-  layout->addWidget(new QLabel(tr("Walls height"), general), 1, 0, 1, 1);
+  CollapsibleWidget *generalCollapsible = new CollapsibleWidget(tr("Properties"), general, this);
+  ui->propertiesWidget->layout()->addWidget(generalCollapsible);
 
-  mTriangleSz = new QDoubleSpinBox(general);
-  mTriangleSz->setRange(config::MIN_TRIANGLE_SZ, config::MAX_TRIANGLE_SZ);
-  mTriangleSz->setSingleStep(config::DELTA_TRIANGLE_SZ);
-  mTriangleSz->setValue(config::DEFAULT_TRIANGLE_SZ);
-  layout->addWidget(mTriangleSz, 0, 1, 1, 1);
-
-  mWallsHeight = new QDoubleSpinBox(general);
-  mWallsHeight->setRange(config::MIN_WALLS_HEIGHT, config::MAX_WALLS_HEIGHT);
-  mWallsHeight->setSingleStep(config::DELTA_WALLS_HEIGHT);
-  mWallsHeight->setValue(config::DEFAULT_WALLS_HEIGHT);
-  layout->addWidget(mWallsHeight, 1, 1, 1, 1);
-
-  QPushButton *generalApply = new QPushButton(tr("Apply"), general);
-  layout->addWidget(generalApply, 2, 1, 1, 1);
-
-  // Connect generalApply
-  connect(generalApply, SIGNAL(clicked()), this, SLOT(generalApplyClicked()));
-
-  ui->propertiesWidget->layout()->addWidget(new CollapsibleWidget(tr("Properties"), general, this));
+  connect(generalCollapsible, SIGNAL(collapseChanged(bool)), this, SLOT(onCollapsiblesChange()));
+  connect(generalApply, SIGNAL(clicked()), this, SLOT(onGeneralApplyClicked()));
 
   // Viewport options
   QWidget *viewport = new QWidget(this);
 
+  mViewport = new ViewportControls(viewport);
+  QPushButton *viewportReset = new QPushButton(tr("Reset"), viewport);
+  QPushButton *viewportApply = new QPushButton(tr("Apply"), viewport);
+
   layout = new QGridLayout(viewport);
   layout->setMargin(0);
-
-  mViewport = new ViewportControls(viewport);
-  layout->addWidget(mViewport, 0, 0, 2, 4);
-
-  QPushButton *viewportReset = new QPushButton(tr("Reset"), viewport);
+  layout->addWidget(mViewport,     0, 0, 2, 4);
   layout->addWidget(viewportReset, 2, 0, 1, 2);
-
-  QPushButton *viewportApply = new QPushButton(tr("Apply"), viewport);
   layout->addWidget(viewportApply, 2, 2, 1, 2);
 
-  // Connect viewportReset & viewportApply
-  connect(viewportReset, SIGNAL(clicked()), this, SIGNAL(resetViewPort()));
-  connect(viewportApply, SIGNAL(clicked()), this, SLOT(viewportApplyClicked()));
+  CollapsibleWidget *viewportCollapsible = new CollapsibleWidget(tr("Viewport"), viewport, this);
+  ui->propertiesWidget->layout()->addWidget(viewportCollapsible);
 
-  ui->propertiesWidget->layout()->addWidget(new CollapsibleWidget(tr("Viewport"), viewport, this));
+  connect(viewportCollapsible, SIGNAL(collapseChanged(bool)), this, SLOT(onCollapsiblesChange()));
+  connect(viewportApply, SIGNAL(clicked()), this, SLOT(onViewportApplyClicked()));
+  connect(viewportReset, SIGNAL(clicked()), this, SLOT(onViewportResetClicked()));
+  connect(this, SIGNAL(changeViewport(flat::Rectangle)), mViewport, SLOT(setViewport(flat::Rectangle)));
 
   // Selection options (Shared)
-  mSelectionCollapsible = new CollapsibleWidget(tr("Selection"), 0, this);
+  mSelectionCollapsible = new CollapsibleWidget(tr("Selection"), nullptr, this);
   ui->propertiesWidget->layout()->addWidget(mSelectionCollapsible);
+
+  connect(mSelectionCollapsible, SIGNAL(collapseChanged(bool)), this, SLOT(onCollapsiblesChange()));
 
   // Selection options (Points)
   mSelectionPoint = new QWidget(this);
   mSelectionPoint->setVisible(false);
 
+  mPointX = new QDoubleSpinBox(mSelectionPoint);
+  mPointY = new QDoubleSpinBox(mSelectionPoint);
+  mPointMove = new QPushButton(tr("Apply"), mSelectionPoint);
+  QLabel *xLabel = new QLabel(tr("X"), mSelectionPoint);
+  QLabel *yLabel = new QLabel(tr("Y"), mSelectionPoint);
+  QPushButton *selectionDelete = new QPushButton(tr("Delete point/s"), mSelectionPoint);
+
   layout = new QGridLayout(mSelectionPoint);
   layout->setMargin(0);
-
-  layout->addWidget(new QLabel("X", mSelectionPoint), 0, 0, 1, 1);
-  layout->addWidget(new QLabel("Y", mSelectionPoint), 0, 2, 1, 1);
-
-  mPointX = new QDoubleSpinBox(mSelectionPoint);
-  mPointX->setRange(config::VIEWPORT_MIN_X, config::VIEWPORT_MAX_X);
-  mPointX->setSingleStep(config::DELTA_TRIANGLE_SZ);
-  mPointX->setValue(0.0);
-  layout->addWidget(mPointX, 0, 1, 1, 1);
-
-  mPointY = new QDoubleSpinBox(mSelectionPoint);
-  mPointY->setRange(config::VIEWPORT_MIN_Y, config::VIEWPORT_MAX_Y);
-  mPointY->setSingleStep(config::DELTA_TRIANGLE_SZ);
-  mPointY->setValue(0.0);
-  layout->addWidget(mPointY, 0, 3, 1, 1);
-
-  QPushButton *selectionApply = new QPushButton(tr("Apply"), mSelectionPoint);
-  layout->addWidget(selectionApply, 1, 2, 1, 2);
-
-  QPushButton *selectionDelete = new QPushButton(tr("Delete point/s"), mSelectionPoint);
+  layout->addWidget(xLabel,          0, 0, 1, 1);
+  layout->addWidget(mPointX,         0, 1, 1, 1);
+  layout->addWidget(yLabel,          0, 2, 1, 1);
+  layout->addWidget(mPointY,         0, 3, 1, 1);
   layout->addWidget(selectionDelete, 1, 0, 1, 2);
+  layout->addWidget(mPointMove,      1, 2, 1, 2);
 
-  // Connect selectionApply & selectionDelete
-  connect(selectionApply, SIGNAL(clicked()), this, SLOT(selectionApplyClicked()));
-  connect(selectionDelete, SIGNAL(clicked()), this, SIGNAL(deleteSelectedPoints()));
+  connect(mPointMove, SIGNAL(clicked()), this, SLOT(onPointMoveClicked()));
+  connect(selectionDelete, SIGNAL(clicked()), this, SLOT(onPointDeleteClicked()));
 
   // Selection options (Lines)
   mSelectionLine = new QWidget(this);
   mSelectionLine->setVisible(false);
 
+  mLineLength = new QLabel(tr("Length: %1").arg(0.0/*, 0, 'g', 2*/), mSelectionLine);
+  mLineSlope = new QLabel(tr("Slope: %1").arg(0.0, 0, 'g', 2), mSelectionLine);
+  QPushButton *selectionSplitLine = new QPushButton(tr("Split line"), mSelectionLine);
+
   layout = new QGridLayout(mSelectionLine);
   layout->setMargin(0);
+  layout->addWidget(mLineLength,        0, 0, 1, 1);
+  layout->addWidget(mLineSlope,         0, 1, 1, 1);
+  layout->addWidget(selectionSplitLine, 1, 0, 1, 1);
 
-  mLineLength = new QLabel("Length: 0.00", mSelectionLine);
-  mLineSlope = new QLabel("Slope: 0.00", mSelectionLine);
+  connect(selectionSplitLine, SIGNAL(clicked()), this, SLOT(onLineSplitClicked()));
 
-  layout->addWidget(mLineLength, 0, 0, 1, 1);
-  layout->addWidget(mLineSlope, 0, 1, 1, 1);
-
-  QPushButton *selectionSplitLine = new QPushButton(tr("Split line"), mSelectionLine);
-  layout->addWidget(selectionSplitLine, 1, 1, 1, 1);
-
-  // Connect selectionSplitLine
-  connect(selectionSplitLine, SIGNAL(clicked()), this, SIGNAL(splitLine()));
+  resetInputsToDefault();
 }
 
-void MainWindow::createStatusBar() {
+void MainWindow::setupStatusBar() {
   mCursorPos = new QLabel("(X = 0.00, Y = 0.00)", this);
-  mElementCounter = new QLabel("0 elements", this);
+  mElementCounter = new QLabel(tr("%1 elements").arg(0), this);
 
   ui->statusBar->addWidget(mCursorPos, 1);
   ui->statusBar->addWidget(mElementCounter);

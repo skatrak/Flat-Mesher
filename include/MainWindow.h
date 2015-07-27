@@ -3,6 +3,7 @@
 
 #include <QMainWindow>
 
+#include "SelectedItems.h"
 #include "SelectionMode.h"
 
 namespace Ui {
@@ -19,6 +20,7 @@ class MeshEditor;
 class QActionGroup;
 class QDoubleSpinBox;
 class QLabel;
+class QPushButton;
 class QUndoGroup;
 class ViewportControls;
 
@@ -43,10 +45,6 @@ public slots:
 
   void exportMesh();
 
-  // Edit
-  void undo();
-  void redo();
-
   // Tools
   void toolChanged(QAction *toolAction);
   void findProblems();
@@ -54,25 +52,37 @@ public slots:
   // Help
   void about();
 
-private slots:
-  void generalApplyClicked();
-  void viewportApplyClicked();
-  void selectionApplyClicked();
-  void tabChanged(int tabIndex);
-
 signals:
-  void changeGeneralProperties(double triangleSize, double wallsHeight);
-  void changeViewPort(const flat::Rectangle& viewport);
-  void moveSelectedPoint(const flat::Point2& point);
-  void resetViewPort();
-  void deleteSelectedPoints();
-  void splitLine();
-  void changeMode(SelectionMode mode);
+  void changeViewport(const flat::Rectangle& viewport);
+
+protected slots:
+  void onCursorMoved(const flat::Point2& pos);
+  void onViewportChanged(const flat::Rectangle& viewport);
+  void onPointsAmountChanged(int diff);
+  void onSelectionChanged(SelectedItems selectionType);
+
+protected:
+  int findOpenFile(const QString& fileName) const;
+
+private slots:
+  void onTabChanged(int tabIndex);
+  void onTabClose(int tabIndex);
+  void onGridVisibilityChanged(bool visible);
+  void onCollapsiblesChange();
+
+  void onGeneralApplyClicked();
+  void onViewportApplyClicked();
+  void onViewportResetClicked();
+  void onPointMoveClicked();
+  void onPointDeleteClicked();
+  void onLineSplitClicked();
 
 private:
-  void createToolbarActions();
-  void createPropertiesSidebar();
-  void createStatusBar();
+  bool saveEditorModel(int tabIndex);
+  void resetInputsToDefault();
+  void setupActions();
+  void setupPropertiesSidebar();
+  void setupStatusBar();
 
   Ui::MainWindow *ui;
 
@@ -92,6 +102,7 @@ private:
   CollapsibleWidget *mSelectionCollapsible;
   QWidget *mSelectionPoint, *mSelectionLine;
   QDoubleSpinBox *mPointX, *mPointY;
+  QPushButton *mPointMove;
   QLabel *mLineLength, *mLineSlope;
 
   // Status bar
