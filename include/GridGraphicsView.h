@@ -15,8 +15,8 @@ public:
   bool isGridVisible() const { return mGridVisible; }
 
 public slots:
-  void setCellsSize(double size) { if (size > 0.0) mCellsSize = size; }
-  void setGridVisible(bool visible) { mGridVisible = visible; update(); }
+  void setCellsSize(double size);
+  void setGridVisible(bool visible);
 
 protected:
   void drawBackground(QPainter *painter, const QRectF &rect);
