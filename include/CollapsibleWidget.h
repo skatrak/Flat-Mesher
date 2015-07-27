@@ -4,7 +4,7 @@
 #include <QWidget>
 
 class QLabel;
-class QVBoxLayout;
+class QGridLayout;
 class QToolButton;
 
 class CollapsibleWidget: public QWidget {
@@ -12,11 +12,14 @@ class CollapsibleWidget: public QWidget {
 
 public:
   CollapsibleWidget(QString title, QWidget *content, QWidget *parent = 0);
-  virtual ~CollapsibleWidget();
+  QWidget* content() const { return mContent; }
 
 public slots:
   void setTitle(QString title);
   void setContent(QWidget* content);
+
+signals:
+  void collapseChanged(bool collapsed);
 
 private slots:
   void toggle();
@@ -27,7 +30,7 @@ private:
   QLabel *mTitle;
   QWidget *mContent;
   QToolButton *mCollapse;
-  QVBoxLayout *mLayout;
+  QGridLayout *mLayout;
 
 };
 

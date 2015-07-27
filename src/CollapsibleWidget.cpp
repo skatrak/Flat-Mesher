@@ -2,10 +2,9 @@
 
 #include "Configuration.h"
 
-#include <QHBoxLayout>
+#include <QGridLayout>
 #include <QToolButton>
 #include <QLabel>
-#include <QVBoxLayout>
 
 CollapsibleWidget::CollapsibleWidget(QString title, QWidget* content,
                                      QWidget* parent):
@@ -17,20 +16,14 @@ CollapsibleWidget::CollapsibleWidget(QString title, QWidget* content,
   mCollapse->setArrowType(Qt::DownArrow);
   mCollapse->setAutoRaise(true);
 
-  mLayout = new QVBoxLayout(this);
+  mLayout = new QGridLayout(this);
 
-  QHBoxLayout *titleLayout = new QHBoxLayout;
-  titleLayout->addWidget(mTitle, 1);
-  titleLayout->addWidget(mCollapse);
+  mLayout->addWidget(mTitle, 0, 0, 1, 1);
+  mLayout->addWidget(mCollapse, 0, 1, 1, 1, Qt::AlignRight);
 
-  mLayout->addLayout(titleLayout);
   setContent(content);
 
   connect(mCollapse, SIGNAL(clicked()), this, SLOT(toggle()));
-}
-
-CollapsibleWidget::~CollapsibleWidget() {
-
 }
 
 void CollapsibleWidget::setTitle(QString title) {
@@ -47,17 +40,17 @@ void CollapsibleWidget::setTitle(QString title) {
 }
 
 void CollapsibleWidget::setContent(QWidget* content) {
-  if (mContent) {
-    mLayout->removeWidget(mContent);
-    delete mContent;
-  }
+  if (content != mContent) {
+    if (mContent)
+      mLayout->removeWidget(mContent);
 
-  if (content) {
-    mLayout->addWidget(content, 1);
-    content->setVisible(mVisible);
-  }
+    if (content) {
+      mLayout->addWidget(content, 1, 0, 1, 2, Qt::AlignLeft);
+      content->setVisible(mVisible);
+    }
 
-  mContent = content;
+    mContent = content;
+  }
 }
 
 void CollapsibleWidget::toggle() {
@@ -70,4 +63,6 @@ void CollapsibleWidget::toggle() {
     mCollapse->setArrowType(Qt::DownArrow);
   else
     mCollapse->setArrowType(Qt::RightArrow);
+
+  emit collapseChanged(!mVisible);
 }
