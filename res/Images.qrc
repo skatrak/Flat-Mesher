@@ -3,5 +3,12 @@
         <file>img/cursor-arrow.png</file>
         <file>img/cursor-cross.png</file>
         <file>img/cursor-openhand.png</file>
+        <file>img/exit.png</file>
+        <file>img/new.png</file>
+        <file>img/open.png</file>
+        <file>img/redo.png</file>
+        <file>img/save.png</file>
+        <file>img/undo.png</file>
+        <file>img/app-icon.png</file>
     </qresource>
 </RCC>
