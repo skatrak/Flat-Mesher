@@ -64,6 +64,12 @@
     <ClInclude Include="include\FlatMesher\VTUMeshFormatter.h">
       <Filter>Archivos de encabezado</Filter>
     </ClInclude>
+    <ClInclude Include="include\FlatMesher\PlanErrorChecker.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
+    <ClInclude Include="include\FlatMesher\AbortPlanErrorChecker.h">
+      <Filter>Archivos de encabezado</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="src\Point2.cpp">

@@ -10,6 +10,8 @@
 
 namespace flat {
 
+class PlanErrorChecker;
+
 class FloorPlan {
 public:
   FloorPlan(): m_height(0.0), m_triangle_sz(0.0) {}
@@ -28,8 +30,10 @@ public:
   Rectangle boundingBox() const;
   double boundaryLength() const;
 
+  bool checkErrors(PlanErrorChecker* checker) const;
   bool valid() const;
-  // Not reliable if used for points in the boundaries
+
+  // Not reliable if used for points in the boundary
   bool pointInside(const Point2& p) const;
   bool pointInBoundary(const Point2& p) const;
 

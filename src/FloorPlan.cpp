@@ -1,5 +1,6 @@
 #include "FlatMesher/FloorPlan.h"
 #include "FlatMesher/Line2.h"
+#include "FlatMesher/AbortPlanErrorChecker.h"
 #include "FlatMesher/Utils.h"
 
 #include <limits>
@@ -39,20 +40,25 @@ double FloorPlan::boundaryLength() const {
   return len;
 }
 
-bool FloorPlan::valid() const {
+bool FloorPlan::checkErrors(PlanErrorChecker* checker) const {
+  if (!checker)
+    return false;
+
   // Check if the number of nodes is enough
   size_t sz_nodes = m_nodes.size();
-  if (sz_nodes < 3)
+  if (sz_nodes < 3 && checker->visitInsufficientNodes(sz_nodes))
     return false;
 
-  // Check if the height is divisible by the triangle size
+  // Check if the triangle size is correct
+  if (m_triangle_sz <= 0.0 && checker->visitInvalidTriangleSize(m_triangle_sz))
+    return false;
+
+  // Check if the height is divisible by the triangle size and if it is greater than 0
   double tmp = m_height / m_triangle_sz;
-  if (!utils::isInteger(tmp))
+  if ((!utils::isInteger(tmp) || tmp <= 0.0) && checker->visitInvalidHeight(m_height))
     return false;
 
-  // Check if sizes between points and the slope of the segments are divisible
-  // by the triangle size, and if points are given in CCW order
-  double total = 0;
+  double total = 0.0;
   for (size_t i = 1; i <= sz_nodes; ++i) {
     Point2 a = m_nodes[i - 1];
     Point2 b = m_nodes[i % sz_nodes];
@@ -60,15 +66,23 @@ bool FloorPlan::valid() const {
     Line2 ab(a, b);
     double slope = ab.slope();
 
-    if (!utils::isInteger(ab.length() / m_triangle_sz) ||
-        (slope != std::numeric_limits<double>::max() && !utils::isInteger(slope / m_triangle_sz)))
+    // Check if the segment length is divisible by the triangle size
+    if (!utils::isInteger(ab.length() / m_triangle_sz) &&
+        checker->visitInvalidSegmentLength(ab))
       return false;
 
+    // Check if the slope is divisible by the triangle size or if it is vertical
+    if (slope != std::numeric_limits<double>::max() &&
+        !utils::isInteger(slope / m_triangle_sz) &&
+        checker->visitInvalidSegmentSlope(ab))
+      return false;
+
+    // This sum is used to know if points are in CCW order
     total += (b.getX() - a.getX()) * (a.getY() + b.getY());
   }
 
   // Points are not expressed in CCW order
-  if (total >= 0.0)
+  if (total >= 0.0 && checker->visitNotCCWOrder())
     return false;
 
   // Check if there are no repeated points or intersecting segments
@@ -76,7 +90,7 @@ bool FloorPlan::valid() const {
     Line2 a(m_nodes[i], m_nodes[i + 1]);
 
     for (size_t j = i + 1; j < sz_nodes; ++j)
-      if (m_nodes[i] == m_nodes[j])
+      if (m_nodes[i] == m_nodes[j] && checker->visitRepeatedPoint(m_nodes[i]))
         return false;
 
     // Don't check consecutive segments, because thay always intersect
@@ -84,13 +98,18 @@ bool FloorPlan::valid() const {
     for (size_t j = i + 2; j < sz_nodes; ++j) {
       if (i != 0 || j < sz_nodes - 1) {
         Line2 b(m_nodes[j], m_nodes[(j + 1) % sz_nodes]);
-        if (a.intersects(b))
+        if (a.intersects(b) && checker->visitIntersectingSegments(a, b))
           return false;
       }
     }
   }
 
   return true;
+}
+
+bool FloorPlan::valid() const {
+  AbortPlanErrorChecker checker;
+  return checkErrors(&checker);
 }
 
 bool FloorPlan::pointInside(const Point2& p) const {
