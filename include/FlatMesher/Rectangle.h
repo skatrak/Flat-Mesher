@@ -21,6 +21,10 @@ public:
   Point2 getTopRight() const { return Point2(m_lr.getX(), m_tl.getY()); }
   Point2 getLowerLeft() const { return Point2(m_tl.getX(), m_lr.getY()); }
   Point2 getLowerRight() const { return m_lr; }
+  double getTop() const { return m_tl.getY(); }
+  double getBottom() const { return m_lr.getY(); }
+  double getLeft() const { return m_tl.getX(); }
+  double getRight() const { return m_lr.getX(); }
   double getWidth() const { return m_lr.getX() - m_tl.getX(); }
   double getHeight() const { return m_tl.getY() - m_lr.getY(); }
 
