@@ -3,6 +3,8 @@
 #include "Configuration.h"
 #include "GridGraphicsView.h"
 
+#include <FlatMesher/Utils.h>
+
 #include <QGridLayout>
 #include <QGraphicsEllipseItem>
 #include <QGraphicsItem>
@@ -238,7 +240,9 @@ void MeshEditor::setViewport(const QRectF& sceneRect) {
   mView->scale(zoomX, zoomY);
 
   mView->update();
-  //emit viewportChanged(viewport());
+
+  if (!flat::utils::areEqual(zoomX, 1.0) || !flat::utils::areEqual(zoomY, 1.0))
+    emit viewportChanged(mapToFlat(sceneRect));
 }
 
 void MeshEditor::onMouseMoved(const QPoint& pos) {

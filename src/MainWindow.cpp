@@ -163,7 +163,7 @@ void MainWindow::onCursorMoved(const flat::Point2& pos) {
 }
 
 void MainWindow::onViewportChanged(const flat::Rectangle& viewport) {
-  //if (viewport != mViewport->viewport())
+  if (viewport != mViewport->viewport())
     emit changeViewport(viewport);
 }
 
