@@ -44,3 +44,7 @@ void Rectangle::setWidth(double width) {
 void Rectangle::setHeight(double height) {
   m_lr = Point2(m_lr.getX(), m_tl.getY() - height);
 }
+
+bool flat::Rectangle::operator==(const Rectangle& p) const {
+  return m_tl == p.m_tl && m_lr == p.m_lr;
+}

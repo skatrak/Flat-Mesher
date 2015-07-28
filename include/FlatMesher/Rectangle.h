@@ -32,6 +32,9 @@ public:
   void setWidth(double width);
   void setHeight(double height);
 
+  bool operator==(const Rectangle& p) const;
+  bool operator!=(const Rectangle& p) const { return !(*this == p); }
+
   Rectangle& operator=(const Rectangle& rect) = default;
 
 private:
