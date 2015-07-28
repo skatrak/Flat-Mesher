@@ -6,7 +6,6 @@ const int config::HEADER_FONT_SZ = 10;
 
 const double config::MIN_TRIANGLE_SZ = 0.05;
 const double config::MAX_TRIANGLE_SZ = 50.0;
-const double config::DELTA_TRIANGLE_SZ = 0.1;
 const double config::DEFAULT_TRIANGLE_SZ = 0.5;
 
 const double config::MIN_WALLS_HEIGHT = 0.05;

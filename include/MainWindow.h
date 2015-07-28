@@ -63,6 +63,7 @@ protected slots:
 
 protected:
   int findOpenFile(const QString& fileName) const;
+  void configureAndSelectEditor(MeshEditor *editor, const QString& tabName);
 
 private slots:
   void onTabChanged(int tabIndex);

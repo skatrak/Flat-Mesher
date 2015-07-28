@@ -3,9 +3,7 @@
 
 #include <QWidget>
 
-namespace flat {
-class Rectangle;
-}
+#include <FlatMesher/Rectangle.h>
 
 class QDoubleSpinBox;
 
@@ -19,6 +17,7 @@ public:
   double maxX() const;
   double minY() const;
   double maxY() const;
+  flat::Rectangle viewport() const;
 
   void resetInputsToDefault();
 

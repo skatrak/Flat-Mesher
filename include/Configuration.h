@@ -9,7 +9,6 @@ extern const int HEADER_FONT_SZ;
 
 extern const double MIN_TRIANGLE_SZ;
 extern const double MAX_TRIANGLE_SZ;
-extern const double DELTA_TRIANGLE_SZ;
 extern const double DEFAULT_TRIANGLE_SZ;
 
 extern const double MIN_WALLS_HEIGHT;

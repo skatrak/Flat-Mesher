@@ -2,6 +2,9 @@
 
 #include "Configuration.h"
 
+#include <QMouseEvent>
+#include <QWheelEvent>
+
 #include <cmath>
 
 GridGraphicsView::GridGraphicsView(QWidget* parent):
@@ -49,4 +52,25 @@ void GridGraphicsView::drawBackground(QPainter *painter, const QRectF &rect) {
     painter->drawLines(lines.data(), lines.size());
     painter->restore();
   }
+}
+
+void GridGraphicsView::wheelEvent(QWheelEvent* event) {
+  QWheelEvent *wheelEvent = (QWheelEvent*) event;
+
+  if (wheelEvent->modifiers().testFlag(Qt::ControlModifier)) {
+    setResizeAnchor(QGraphicsView::AnchorUnderMouse);
+    double scaleFactor = 1.15;
+
+    if (wheelEvent->delta() > 0)
+      scale(scaleFactor, scaleFactor);
+    else
+      scale(1.0 / scaleFactor, 1.0 / scaleFactor);
+  }
+  else
+    QGraphicsView::wheelEvent(event);
+}
+
+void GridGraphicsView::mouseMoveEvent(QMouseEvent *event) {
+  QGraphicsView::mouseMoveEvent(event);
+  emit mouseMoved(event->pos());
 }

@@ -9,7 +9,7 @@
 #include <QLabel>
 
 ViewportControls::ViewportControls(QWidget *parent):
-    QWidget(parent), mStep(config::DELTA_TRIANGLE_SZ) {
+    QWidget(parent), mStep(config::DEFAULT_TRIANGLE_SZ) {
 
   mMinX = new QDoubleSpinBox(this);
   mMaxX = new QDoubleSpinBox(this);
@@ -54,6 +54,10 @@ double ViewportControls::minY() const {
 
 double ViewportControls::maxY() const {
   return mMaxY->value();
+}
+
+flat::Rectangle ViewportControls::viewport() const {
+  return flat::Rectangle(maxY(), minY(), minX(), maxX());
 }
 
 void ViewportControls::resetInputsToDefault() {
@@ -110,13 +114,10 @@ void ViewportControls::setMaxY(double value) {
 }
 
 void ViewportControls::setViewport(const flat::Rectangle& viewport) {
-  flat::Point2 tl = viewport.getTopLeft();
-  flat::Point2 lr = viewport.getLowerRight();
-
-  setMinX(tl.getX());
-  setMaxX(lr.getX());
-  setMinY(lr.getY());
-  setMaxY(tl.getY());
+  setMinX(viewport.getLeft());
+  setMaxX(viewport.getRight());
+  setMinY(viewport.getBottom());
+  setMaxY(viewport.getTop());
 }
 
 void ViewportControls::minXChanged(double value) {

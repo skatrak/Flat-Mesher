@@ -41,12 +41,7 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::newFlat() {
-  MeshEditor *editor = new MeshEditor();
-  editor->layout()->setContentsMargins(0 ,0, 0, 0);
-  editor->setGridVisible(ui->actionShowGrid->isChecked());
-
-  int index = ui->planSet->addTab(editor, tr("<unnamed>"));
-  ui->planSet->setCurrentIndex(index);
+  configureAndSelectEditor(new MeshEditor(), tr("<unnamed>"));
 }
 
 void MainWindow::openFlat() {
@@ -54,18 +49,9 @@ void MainWindow::openFlat() {
   QString fileName = FileManager::openFlat(plan);
 
   if (!fileName.isNull()) {
-    QString file = fileName.section('/', -1);
     // If it is loaded, only swap the current tab
     int tabIndex = findOpenFile(fileName);
-    if (tabIndex < 0) {
-      MeshEditor *editor = new MeshEditor(fileName, plan, this);
-      editor->layout()->setContentsMargins(0, 0, 0, 0);
-      editor->setGridVisible(ui->actionShowGrid->isChecked());
-
-      int index = ui->planSet->addTab(editor, file);
-      ui->planSet->setCurrentIndex(index);
-    }
-    else {
+    if (tabIndex >= 0) {
       // Ask if user wants to replace unsaved data
       ui->planSet->setCurrentIndex(tabIndex);
       if (!mCurrentEditor->isSaved()) {
@@ -76,6 +62,13 @@ void MainWindow::openFlat() {
         if (response == QMessageBox::Yes)
           mCurrentEditor->loadPlan(plan);
       }
+    }
+    else {
+      MeshEditor *editor = new MeshEditor();
+      configureAndSelectEditor(editor, fileName.section('/', -1));
+
+      editor->setFileName(fileName);
+      editor->loadPlan(plan);
     }
   }
 }
@@ -126,7 +119,6 @@ void MainWindow::saveAllFlats() {
 }
 
 void MainWindow::exportMesh() {
-  // TODO Only when an editor is selected
   if (mCurrentEditor != nullptr)
     FileManager::saveMesh(mCurrentEditor->mesh());
 }
@@ -156,7 +148,8 @@ void MainWindow::toolChanged(QAction *toolAction) {
 }
 
 void MainWindow::findProblems() {
-  // TODO Extend the library to test everything and return all problems found
+  // TODO Create the PlanErrorChecker subclass that creates a QString with the
+  // TODO problems found and put that string inside a dialog
 }
 
 void MainWindow::about() {
@@ -166,14 +159,14 @@ void MainWindow::about() {
 }
 
 void MainWindow::onCursorMoved(const flat::Point2& pos) {
-  mCursorPos->setText(tr("(X = %1, Y = %2)").arg(pos.getX(), 0, 'g', 2).arg(pos.getY(), 0, 'g', 2));
+  mCursorPos->setText(tr("(X = %1, Y = %2)").arg(pos.getX()).arg(pos.getY()));
 }
 
 void MainWindow::onViewportChanged(const flat::Rectangle& viewport) {
-  emit changeViewport(viewport);
+  //if (viewport != mViewport->viewport())
+    emit changeViewport(viewport);
 }
 
-// FIXME This is not being called
 void MainWindow::onPointsAmountChanged(int /*diff*/) {
   mElementCounter->setText(tr("%1 elements").arg(mCurrentEditor->pointCount()));
 }
@@ -204,8 +197,8 @@ void MainWindow::onSelectionChanged(SelectedItems selectionType) {
     break;
   case SelectedItems::Line:
     line = mCurrentEditor->selectedLine();
-    mLineLength->setText(tr("Length: %1").arg(line.length(), 0, 'g', 2));
-    mLineSlope->setText(tr("Slope: %1").arg(line.slope(), 0, 'g', 2));
+    mLineLength->setText(tr("Length: %1").arg(line.length()));
+    mLineSlope->setText(tr("Slope: %1").arg(line.slope()));
 
     mSelectionCollapsible->setContent(mSelectionLine);
     break;
@@ -222,6 +215,19 @@ int MainWindow::findOpenFile(const QString& fileName) const {
   return -1;
 }
 
+void MainWindow::configureAndSelectEditor(MeshEditor* editor,
+                                          const QString& tabName) {
+  editor->layout()->setContentsMargins(0 ,0, 0, 0);
+  editor->setGridVisible(ui->actionShowGrid->isChecked());
+  flat::Rectangle vp = editor->viewport();
+
+  int index = ui->planSet->addTab(editor, tabName);
+  ui->planSet->setCurrentIndex(index);
+
+  editor->setViewport(vp);
+  mViewport->setViewport(editor->viewport());
+}
+
 void MainWindow::onTabChanged(int tabIndex) {
   // Disconnect every signal between the main window and the previous active
   // editor
@@ -236,14 +242,7 @@ void MainWindow::onTabChanged(int tabIndex) {
 
     mTriangleSz->setValue(mCurrentEditor->triangleSize());
     mWallsHeight->setValue(mCurrentEditor->wallsHeight());
-
-    flat::Rectangle viewport = mCurrentEditor->viewport();
-    flat::Point2 tl = viewport.getTopLeft();
-    flat::Point2 lr = viewport.getLowerRight();
-    mViewport->setMinX(tl.getX());
-    mViewport->setMaxX(lr.getX());
-    mViewport->setMinY(lr.getY());
-    mViewport->setMaxY(tl.getY());
+    mViewport->setViewport(mCurrentEditor->viewport());
 
     onSelectionChanged(mCurrentEditor->selectionType());
 
@@ -296,6 +295,10 @@ void MainWindow::onGeneralApplyClicked() {
     mCurrentEditor->setTrianglesSize(mTriangleSz->value());
     mCurrentEditor->setWallsHeight(mWallsHeight->value());
   }
+
+  mViewport->setStepSize(mTriangleSz->value());
+  mPointX->setSingleStep(mTriangleSz->value());
+  mPointY->setSingleStep(mTriangleSz->value());
 }
 
 void MainWindow::onViewportApplyClicked() {
@@ -360,7 +363,7 @@ bool MainWindow::saveEditorModel(int tabIndex) {
 
 void MainWindow::resetInputsToDefault() {
   mTriangleSz->setRange(config::MIN_TRIANGLE_SZ, config::MAX_TRIANGLE_SZ);
-  mTriangleSz->setSingleStep(config::DELTA_TRIANGLE_SZ);
+  mTriangleSz->setSingleStep(config::DEFAULT_TRIANGLE_SZ);
   mTriangleSz->setValue(config::DEFAULT_TRIANGLE_SZ);
 
   mWallsHeight->setRange(config::MIN_WALLS_HEIGHT, config::MAX_WALLS_HEIGHT);
@@ -368,11 +371,11 @@ void MainWindow::resetInputsToDefault() {
   mWallsHeight->setValue(config::DEFAULT_WALLS_HEIGHT);
 
   mPointX->setRange(config::VIEWPORT_MIN_X, config::VIEWPORT_MAX_X);
-  mPointX->setSingleStep(config::DELTA_TRIANGLE_SZ);
+  mPointX->setSingleStep(config::DEFAULT_TRIANGLE_SZ);
   mPointX->setValue(0.0);
 
   mPointY->setRange(config::VIEWPORT_MIN_Y, config::VIEWPORT_MAX_Y);
-  mPointY->setSingleStep(config::DELTA_TRIANGLE_SZ);
+  mPointY->setSingleStep(config::DEFAULT_TRIANGLE_SZ);
   mPointY->setValue(0.0);
 
   mViewport->resetInputsToDefault();
@@ -526,8 +529,8 @@ void MainWindow::setupPropertiesSidebar() {
   mSelectionLine = new QWidget(this);
   mSelectionLine->setVisible(false);
 
-  mLineLength = new QLabel(tr("Length: %1").arg(0.0/*, 0, 'g', 2*/), mSelectionLine);
-  mLineSlope = new QLabel(tr("Slope: %1").arg(0.0, 0, 'g', 2), mSelectionLine);
+  mLineLength = new QLabel(tr("Length: %1").arg(0.0), mSelectionLine);
+  mLineSlope = new QLabel(tr("Slope: %1").arg(0.0), mSelectionLine);
   QPushButton *selectionSplitLine = new QPushButton(tr("Split line"), mSelectionLine);
 
   layout = new QGridLayout(mSelectionLine);

@@ -30,7 +30,9 @@ MeshEditor::MeshEditor(QWidget *parent): QWidget(parent),
                      config::DEFAULT_VIEWPORT_MIN_X, config::DEFAULT_VIEWPORT_MAX_X);
   setViewport(vp);
 
+  //connect(mScene, SIGNAL(sceneRectChanged(QRectF)), this, SLOT(onSceneRectChanged(QRectF)));
   connect(mScene, SIGNAL(selectionChanged()), this, SLOT(onSelectionChanged()));
+  connect(mView, SIGNAL(mouseMoved(QPoint)), this, SLOT(onMouseMoved(QPoint)));
 }
 
 MeshEditor::MeshEditor(const QString& fileName, const flat::FloorPlan& plan, QWidget *parent):
@@ -41,7 +43,7 @@ MeshEditor::MeshEditor(const QString& fileName, const flat::FloorPlan& plan, QWi
 
 flat::FloorPlan MeshEditor::plan() const {
   std::vector<flat::Point2> points;
-  for (QGraphicsItem* i: mPointsStack)
+  for (QGraphicsItem* i: mPointsList)
     points.push_back(mapToFlat(i->data(0).toPointF()));
 
   flat::FloorPlan plan;
@@ -65,7 +67,7 @@ flat::Rectangle MeshEditor::viewport() const {
 }
 
 int MeshEditor::pointCount() const {
-  return mPointsStack.size();
+  return mPointsList.size();
 }
 
 SelectedItems MeshEditor::selectionType() const {
@@ -149,8 +151,7 @@ QLineF MeshEditor::mapFromFlat(const flat::Line2 &line) {
 }
 
 QRectF MeshEditor::mapFromFlat(const flat::Rectangle& rect) {
-  flat::Point2 tl = rect.getTopLeft();
-  return QRectF(tl.getX(), -tl.getY(), rect.getWidth(), rect.getHeight());
+  return QRectF(rect.getLeft(), -rect.getTop(), rect.getWidth(), rect.getHeight());
 }
 
 void MeshEditor::setFileName(const QString& fileName) {
@@ -175,29 +176,11 @@ void MeshEditor::setSaved() {
 }
 
 void MeshEditor::setViewport(const flat::Rectangle& viewport) {
-  QRectF sceneRect = mapFromFlat(viewport);
-  QRectF viewRect = mView->mapToScene(mView->rect()).boundingRect();
-
-  double zoomX = viewRect.width() / sceneRect.width();
-  double zoomY = viewRect.height() / sceneRect.height();
-
-  mView->scale(zoomX * 0.9, zoomY * 0.9);
-  // TODO The top-left corner of the view has to match with the top-left corner
-  // TODO of the viewport
-  // mView->translate(dx, dy);
-
-  mView->update();
+  setViewport(mapFromFlat(viewport));
 }
 
 void MeshEditor::adjustViewport() {
-  QRectF sceneRect = mScene->sceneRect();
-  QRectF viewRect = mView->mapToScene(mView->rect()).boundingRect();
-
-  double zoomX = viewRect.width() / sceneRect.width();
-  double zoomY = viewRect.height() / sceneRect.height();
-
-  mView->scale(zoomX * 0.9, zoomY * 0.9);
-  mView->update();
+  setViewport(mScene->sceneRect());
 }
 
 void MeshEditor::setGridVisible(bool visible) {
@@ -241,6 +224,27 @@ void MeshEditor::onSelectionChanged() {
   emit selectionChanged(selectionType());
 }
 
+void MeshEditor::setViewport(const QRectF& sceneRect) {
+  // FIXME The view is always centered, so the viewport is only correct when
+  // FIXME the scene doesn't fit in the view or it's just the right size.
+  // FIXME When the view is bigger than the scene displayed, it's centered.
+  QRectF viewRect = mView->mapToScene(mView->rect()).boundingRect();
+
+  double zoomX = viewRect.width() / (sceneRect.width() + mTriangleSize);
+  double zoomY = viewRect.height() / (sceneRect.height() + mTriangleSize);
+
+  mView->setResizeAnchor(QGraphicsView::AnchorViewCenter);
+  mView->centerOn(sceneRect.center());
+  mView->scale(zoomX, zoomY);
+
+  mView->update();
+  //emit viewportChanged(viewport());
+}
+
+void MeshEditor::onMouseMoved(const QPoint& pos) {
+  emit cursorMoved(mapToFlat(mView->mapToScene(pos)));
+}
+
 void MeshEditor::setPlan(const flat::FloorPlan& plan) {
   int pointsAmount = pointCount();
 
@@ -267,7 +271,7 @@ void MeshEditor::setPlan(const flat::FloorPlan& plan) {
     point->setAcceptHoverEvents(true);
     point->setData(0, current);
 
-    mPointsStack.push(point);
+    mPointsList.insert(point);
 
     QGraphicsLineItem *line = mScene->addLine(QLineF(current, next), pen);
     line->setFlag(QGraphicsItem::ItemIsSelectable);

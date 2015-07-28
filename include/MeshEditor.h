@@ -1,8 +1,7 @@
 #ifndef MESHEDITOR_H
 #define MESHEDITOR_H
 
-#include <QList>
-#include <QStack>
+#include <QSet>
 #include <QString>
 #include <QWidget>
 
@@ -77,16 +76,19 @@ signals:
   void selectionChanged(SelectedItems selectionType);
 
 protected slots:
+  //void onSceneRectChanged(const QRectF& rect);
   void onSelectionChanged();
+  void onMouseMoved(const QPoint& pos);
 
 protected:
   void setPlan(const flat::FloorPlan& plan);
+  void setViewport(const QRectF& sceneRect);
 
 private:
   QString mFileName;
   double mTriangleSize, mWallsHeight;
 
-  QStack<QGraphicsItem*> mPointsStack;
+  QSet<QGraphicsItem*> mPointsList;
   QUndoStack *mUndoStack;
   SelectionMode mCurrentMode;
 
