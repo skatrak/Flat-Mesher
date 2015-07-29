@@ -76,9 +76,9 @@ signals:
   void selectionChanged(SelectedItems selectionType);
 
 protected slots:
-  //void onSceneRectChanged(const QRectF& rect);
   void onSelectionChanged();
   void onMouseMoved(const QPoint& pos);
+  void onScrollBarMoved();
 
 protected:
   void setPlan(const flat::FloorPlan& plan);

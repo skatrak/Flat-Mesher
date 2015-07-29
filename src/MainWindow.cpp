@@ -164,7 +164,7 @@ void MainWindow::onCursorMoved(const flat::Point2& pos) {
 
 void MainWindow::onViewportChanged(const flat::Rectangle& viewport) {
   if (viewport != mViewport->viewport())
-    emit changeViewport(viewport);
+    mViewport->setViewport(viewport);
 }
 
 void MainWindow::onPointsAmountChanged(int /*diff*/) {
@@ -238,15 +238,15 @@ void MainWindow::onTabChanged(int tabIndex) {
 
   if (tabIndex >= 0) {
     mCurrentEditor = dynamic_cast<MeshEditor*>(ui->planSet->widget(tabIndex));
-    mUndoGroup->setActiveStack(mCurrentEditor->undoStack());
+    mCurrentEditor->setSelectionMode(mCurrentMode);
 
+    mUndoGroup->setActiveStack(mCurrentEditor->undoStack());
     mTriangleSz->setValue(mCurrentEditor->triangleSize());
     mWallsHeight->setValue(mCurrentEditor->wallsHeight());
     mViewport->setViewport(mCurrentEditor->viewport());
 
     onSelectionChanged(mCurrentEditor->selectionType());
 
-    connect(this, SIGNAL(changeViewport(flat::Rectangle)), mCurrentEditor, SLOT(setViewport(flat::Rectangle)));
     connect(mCurrentEditor, SIGNAL(cursorMoved(flat::Point2)), this, SLOT(onCursorMoved(flat::Point2)));
     connect(mCurrentEditor, SIGNAL(viewportChanged(flat::Rectangle)), this, SLOT(onViewportChanged(flat::Rectangle)));
     connect(mCurrentEditor, SIGNAL(pointsAmountChanged(int)), this, SLOT(onPointsAmountChanged(int)));
@@ -302,12 +302,8 @@ void MainWindow::onGeneralApplyClicked() {
 }
 
 void MainWindow::onViewportApplyClicked() {
-  if (mCurrentEditor != nullptr) {
-    double minX = mViewport->minX(), maxX = mViewport->maxX();
-    double minY = mViewport->minY(), maxY = mViewport->maxY();
-
-    emit changeViewport(flat::Rectangle(maxY, minY, minX, maxX));
-  }
+  if (mCurrentEditor != nullptr)
+    mCurrentEditor->setViewport(mViewport->viewport());
 }
 
 void MainWindow::onViewportResetClicked() {
@@ -494,7 +490,6 @@ void MainWindow::setupPropertiesSidebar() {
   connect(viewportCollapsible, SIGNAL(collapseChanged(bool)), this, SLOT(onCollapsiblesChange()));
   connect(viewportApply, SIGNAL(clicked()), this, SLOT(onViewportApplyClicked()));
   connect(viewportReset, SIGNAL(clicked()), this, SLOT(onViewportResetClicked()));
-  connect(this, SIGNAL(changeViewport(flat::Rectangle)), mViewport, SLOT(setViewport(flat::Rectangle)));
 
   // Selection options (Shared)
   mSelectionCollapsible = new CollapsibleWidget(tr("Selection"), nullptr, this);

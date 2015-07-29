@@ -52,9 +52,6 @@ public slots:
   // Help
   void about();
 
-signals:
-  void changeViewport(const flat::Rectangle& viewport);
-
 protected slots:
   void onCursorMoved(const flat::Point2& pos);
   void onViewportChanged(const flat::Rectangle& viewport);

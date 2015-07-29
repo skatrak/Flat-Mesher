@@ -14,12 +14,12 @@ public:
   double cellsSize() const { return mCellsSize; }
   bool isGridVisible() const { return mGridVisible; }
 
-signals:
-  void mouseMoved(const QPoint& pos);
-
 public slots:
   void setCellsSize(double size);
   void setGridVisible(bool visible);
+
+signals:
+  void mouseMoved(const QPoint& pos);
 
 protected:
   void drawBackground(QPainter *painter, const QRectF &rect);

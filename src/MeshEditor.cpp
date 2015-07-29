@@ -9,6 +9,7 @@
 #include <QGraphicsEllipseItem>
 #include <QGraphicsItem>
 #include <QGraphicsScene>
+#include <QScrollBar>
 #include <QUndoStack>
 
 #include <vector>
@@ -32,9 +33,10 @@ MeshEditor::MeshEditor(QWidget *parent): QWidget(parent),
                      config::DEFAULT_VIEWPORT_MIN_X, config::DEFAULT_VIEWPORT_MAX_X);
   setViewport(vp);
 
-  //connect(mScene, SIGNAL(sceneRectChanged(QRectF)), this, SLOT(onSceneRectChanged(QRectF)));
-  connect(mScene, SIGNAL(selectionChanged()), this, SLOT(onSelectionChanged()));
-  connect(mView, SIGNAL(mouseMoved(QPoint)), this, SLOT(onMouseMoved(QPoint)));
+  connect(mScene,                       SIGNAL(selectionChanged()), this, SLOT(onSelectionChanged()));
+  connect(mView,                        SIGNAL(mouseMoved(QPoint)), this, SLOT(onMouseMoved(QPoint)));
+  connect(mView->horizontalScrollBar(), SIGNAL(valueChanged(int)),   this, SLOT(onScrollBarMoved()));
+  connect(mView->verticalScrollBar(),   SIGNAL(valueChanged(int)),   this, SLOT(onScrollBarMoved()));
 }
 
 MeshEditor::MeshEditor(const QString& fileName, const flat::FloorPlan& plan, QWidget *parent):
@@ -222,6 +224,10 @@ void MeshEditor::splitSelectedLine() {
 
 }
 
+void MeshEditor::onScrollBarMoved() {
+  emit viewportChanged(viewport());
+}
+
 void MeshEditor::onSelectionChanged() {
   emit selectionChanged(selectionType());
 }
@@ -274,11 +280,13 @@ void MeshEditor::setPlan(const flat::FloorPlan& plan) {
     point->setFlag(QGraphicsItem::ItemIsSelectable);
     point->setAcceptHoverEvents(true);
     point->setData(0, current);
+    point->setBoundingRegionGranularity(1.0);
 
     mPointsList.insert(point);
 
     QGraphicsLineItem *line = mScene->addLine(QLineF(current, next), pen);
     line->setFlag(QGraphicsItem::ItemIsSelectable);
+    line->setBoundingRegionGranularity(1.0);
     line->setAcceptHoverEvents(true);
     line->setZValue(-1.0);
   }
