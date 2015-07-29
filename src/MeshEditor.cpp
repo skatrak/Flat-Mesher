@@ -204,6 +204,34 @@ void MeshEditor::setSelectionMode(SelectionMode mode) {
   }
 }
 
+void MeshEditor::selectAllPoints() {
+  GraphicsPointItem* point = mFirstPoint;
+  if (point) {
+    do {
+      point->setSelected(true);
+      point->outputLine()->setSelected(false);
+      point = point->outputLine()->dest();
+    } while (point && point != mFirstPoint);
+  }
+}
+
+void MeshEditor::invertPointsOrder() {
+  GraphicsPointItem* point = mFirstPoint;
+  if (point) {
+    do {
+      GraphicsPointItem* next = point->outputLine()->dest();
+      point->outputLine()->invertConnection();
+      point->invertConnection();
+      point = next;
+    } while (point && point != mFirstPoint);
+
+    if (mFirstPoint->outputLine() && mFirstPoint->inputLine()) {
+      mFirstPoint->outputLine()->dest()->setHighlighted(false);
+      mFirstPoint->inputLine()->src()->setHighlighted(true);
+    }
+  }
+}
+
 void MeshEditor::changeSelectedPoint(const flat::Point2& point) {
   GraphicsPointItem *pointItem = selectedPointItem();
   if (pointItem)

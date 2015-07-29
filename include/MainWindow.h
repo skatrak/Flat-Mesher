@@ -45,9 +45,13 @@ public slots:
 
   void exportMesh();
 
+  // Edit
+  void selectAll();
+
   // Tools
   void toolChanged(QAction *toolAction);
   void findProblems();
+  void invertPoints();
 
   // Help
   void about();
@@ -66,7 +70,6 @@ private slots:
   void onTabChanged(int tabIndex);
   void onTabClose(int tabIndex);
   void onGridVisibilityChanged(bool visible);
-  void onCollapsiblesChange();
 
   void onGeneralApplyClicked();
   void onViewportApplyClicked();
@@ -78,6 +81,7 @@ private slots:
 private:
   bool saveEditorModel(int tabIndex);
   void resetInputsToDefault();
+  void editorAvailable(bool available);
   void setupActions();
   void setupPropertiesSidebar();
   void setupStatusBar();
@@ -91,7 +95,6 @@ private:
   // Toolbox actions
   QActionGroup *mToolActions;
   QAction *mActionSelectionTool, *mActionHandTool, *mActionAddTool;
-  QAction *mActionFindProblems;
 
   // Properties panel
   QDoubleSpinBox *mTriangleSz, *mWallsHeight;

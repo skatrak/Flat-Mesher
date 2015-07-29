@@ -27,13 +27,7 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
   setupActions();
   setupPropertiesSidebar();
   setupStatusBar();
-
-  ui->splitter->setSizes(QList<int>{ui->planSet->width(),
-                                    ui->propertiesWidget->sizeHint().width() +
-                                    ui->splitter->handleWidth() / 2});
-  ui->splitter->setCollapsible(0, false);
-  ui->splitter->setStretchFactor(0, 1);
-  ui->splitter->setStretchFactor(1, 0);
+  editorAvailable(false);
 }
 
 MainWindow::~MainWindow() {
@@ -69,6 +63,7 @@ void MainWindow::openFlat() {
 
       editor->setFileName(fileName);
       editor->loadPlan(plan);
+      editor->adjustViewport();
     }
   }
 }
@@ -123,6 +118,11 @@ void MainWindow::exportMesh() {
     FileManager::saveMesh(mCurrentEditor->mesh());
 }
 
+void MainWindow::selectAll() {
+  if (mCurrentEditor != nullptr)
+    mCurrentEditor->selectAllPoints();
+}
+
 void MainWindow::toolChanged(QAction *toolAction) {
   bool selection = false;
   SelectionMode prevMode = mCurrentMode;
@@ -152,6 +152,11 @@ void MainWindow::findProblems() {
   // TODO problems found and put that string inside a dialog
 }
 
+void MainWindow::invertPoints() {
+  if (mCurrentEditor != nullptr)
+    mCurrentEditor->invertPointsOrder();
+}
+
 void MainWindow::about() {
   QMessageBox::about(this, tr("About"),
                      tr("<b>FlatMesher</b><tr/>"
@@ -179,8 +184,10 @@ void MainWindow::onSelectionChanged(SelectedItems selectionType) {
   QWidget *previous = mSelectionCollapsible->content();
   mSelectionCollapsible->setContent(nullptr);
 
-  if (previous)
+  if (previous) {
+    previous->setVisible(false);
     previous->setParent(this);
+  }
 
   switch (selectionType) {
   case SelectedItems::Point:
@@ -253,22 +260,14 @@ void MainWindow::onTabChanged(int tabIndex) {
     connect(mCurrentEditor, SIGNAL(selectionChanged(SelectedItems)), this, SLOT(onSelectionChanged(SelectedItems)));
 
     ui->actionShowGrid->setChecked(mCurrentEditor->isGridVisible());
-    ui->actionSave->setEnabled(true);
-    ui->actionSaveAs->setEnabled(true);
-    ui->actionSaveAll->setEnabled(true);
-    ui->actionExport->setEnabled(true);
-    ui->actionFindProblems->setEnabled(true);
+    editorAvailable(true);
   }
   else {
     mCurrentEditor = nullptr;
     mUndoGroup->setActiveStack(nullptr);
+    onSelectionChanged(SelectedItems::None);
 
-    ui->actionSave->setEnabled(false);
-    ui->actionSaveAs->setEnabled(false);
-    ui->actionSaveAll->setEnabled(false);
-    ui->actionExport->setEnabled(false);
-    ui->actionFindProblems->setEnabled(false);
-
+    editorAvailable(false);
     resetInputsToDefault();
   }
 }
@@ -281,13 +280,6 @@ void MainWindow::onTabClose(int tabIndex) {
 void MainWindow::onGridVisibilityChanged(bool visible) {
   if (mCurrentEditor != nullptr)
     mCurrentEditor->setGridVisible(visible);
-}
-
-void MainWindow::onCollapsiblesChange() {
-  // FIXME The size hint of propertiesWidget doesn't change when items are
-  // FIXME collapsed and uncollapsed
-  //ui->splitter->setSizes(QList<int>{ui->planSet->width(),
-  //                                  ui->propertiesWidget->sizeHint().width()+1});
 }
 
 void MainWindow::onGeneralApplyClicked() {
@@ -377,12 +369,23 @@ void MainWindow::resetInputsToDefault() {
   mViewport->resetInputsToDefault();
 }
 
+void MainWindow::editorAvailable(bool available) {
+  ui->actionClose->setEnabled(available);
+  ui->actionCloseAll->setEnabled(available);
+  ui->actionSave->setEnabled(available);
+  ui->actionSaveAs->setEnabled(available);
+  ui->actionSaveAll->setEnabled(available);
+  ui->actionExport->setEnabled(available);
+  ui->actionSelectAll->setEnabled(available);
+  ui->actionFindProblems->setEnabled(available);
+  ui->actionInvertPoints->setEnabled(available);
+}
+
 void MainWindow::setupActions() {
   mToolActions = new QActionGroup(this);
   mActionSelectionTool = new QAction(QPixmap(":/img/cursor-arrow.png"), tr("Selection tool"), this);
   mActionHandTool = new QAction(QPixmap(":/img/cursor-openhand.png"), tr("Hand tool"), this);
   mActionAddTool = new QAction(QPixmap(":/img/cursor-cross.png"), tr("Points addition tool"), this);
-  mActionFindProblems = new QAction(tr("Find problems..."), this);
 
   mActionSelectionTool->setCheckable(true);
   mActionSelectionTool->setChecked(true);
@@ -394,23 +397,20 @@ void MainWindow::setupActions() {
   mActionAddTool->setActionGroup(mToolActions);
 
   QList<QAction*> actGroup = mToolActions->actions();
-  ui->menuTools->addActions(actGroup);
+  ui->menuTools->insertActions(ui->actionFindProblems, actGroup);
+  ui->menuTools->insertSeparator(ui->actionFindProblems);
   ui->toolBar->addActions(actGroup);
-
-  ui->menuTools->addSeparator();
-  ui->menuTools->addAction(mActionFindProblems);
 
   mUndoGroup = new QUndoGroup(this);
   QAction *undoAction = mUndoGroup->createUndoAction(this);
   QAction *redoAction = mUndoGroup->createRedoAction(this);
 
   undoAction->setIcon(QPixmap(":/img/undo.png"));
-  undoAction->setShortcut(QKeySequence::Undo);
   redoAction->setIcon(QPixmap(":/img/redo.png"));
-  redoAction->setShortcut(QKeySequence::Redo);
 
-  ui->menuEdit->addAction(undoAction);
-  ui->menuEdit->addAction(redoAction);
+  ui->menuEdit->insertAction(ui->actionSelectAll, undoAction);
+  ui->menuEdit->insertAction(ui->actionSelectAll, redoAction);
+  ui->menuEdit->insertSeparator(ui->actionSelectAll);
 
   ui->toolBar->addSeparator();
   ui->toolBar->addAction(undoAction);
@@ -425,26 +425,34 @@ void MainWindow::setupActions() {
 
   undoAction->setShortcut(QKeySequence::Undo);
   redoAction->setShortcut(QKeySequence::Redo);
+  ui->actionSelectAll->setShortcut(QKeySequence::SelectAll);
 
   mActionSelectionTool->setShortcut(Qt::Key_S);
   mActionHandTool->setShortcut(Qt::Key_D);
   mActionAddTool->setShortcut(Qt::Key_F);
 
-  connect(ui->actionNew,          SIGNAL(triggered()),            this, SLOT(newFlat()));
-  connect(ui->actionOpen,         SIGNAL(triggered()),            this, SLOT(openFlat()));
-  connect(ui->actionClose,        SIGNAL(triggered()),            this, SLOT(closeFlat()));
-  connect(ui->actionCloseAll,     SIGNAL(triggered()),            this, SLOT(closeAllFlats()));
-  connect(ui->actionSave,         SIGNAL(triggered()),            this, SLOT(saveFlat()));
-  connect(ui->actionSaveAs,       SIGNAL(triggered()),            this, SLOT(saveFlatAs()));
-  connect(ui->actionSaveAll,      SIGNAL(triggered()),            this, SLOT(saveAllFlats()));
-  connect(ui->actionExport,       SIGNAL(triggered()),            this, SLOT(exportMesh()));
-  connect(ui->actionExit,         SIGNAL(triggered()),            this, SLOT(close()));
-  connect(ui->actionFindProblems, SIGNAL(triggered()),            this, SLOT(findProblems()));
-  connect(ui->actionShowGrid,     SIGNAL(toggled(bool)),          this, SLOT(onGridVisibilityChanged(bool)));
-  connect(ui->actionAbout,        SIGNAL(triggered()),            this, SLOT(about()));
-  connect(ui->planSet,            SIGNAL(currentChanged(int)),    this, SLOT(onTabChanged(int)));
-  connect(ui->planSet,            SIGNAL(tabCloseRequested(int)), this, SLOT(onTabClose(int)));
-  connect(mToolActions,           SIGNAL(triggered(QAction*)),    this, SLOT(toolChanged(QAction*)));
+  connect(ui->actionNew,            SIGNAL(triggered()),             this, SLOT(newFlat()));
+  connect(ui->actionOpen,           SIGNAL(triggered()),             this, SLOT(openFlat()));
+  connect(ui->actionClose,          SIGNAL(triggered()),             this, SLOT(closeFlat()));
+  connect(ui->actionCloseAll,       SIGNAL(triggered()),             this, SLOT(closeAllFlats()));
+  connect(ui->actionSave,           SIGNAL(triggered()),             this, SLOT(saveFlat()));
+  connect(ui->actionSaveAll,        SIGNAL(triggered()),             this, SLOT(saveAllFlats()));
+  connect(ui->actionSaveAs,         SIGNAL(triggered()),             this, SLOT(saveFlatAs()));
+  connect(ui->actionExport,         SIGNAL(triggered()),             this, SLOT(exportMesh()));
+  connect(ui->actionExit,           SIGNAL(triggered()),             this, SLOT(close()));
+
+  connect(ui->actionSelectAll,      SIGNAL(triggered()),             this, SLOT(selectAll()));
+
+  connect(ui->actionFindProblems,   SIGNAL(triggered()),             this, SLOT(findProblems()));
+  connect(ui->actionInvertPoints,   SIGNAL(triggered()),             this, SLOT(invertPoints()));
+
+  connect(ui->actionShowGrid,       SIGNAL(toggled(bool)),           this, SLOT(onGridVisibilityChanged(bool)));
+  connect(ui->actionAbout,          SIGNAL(triggered()),             this, SLOT(about()));
+  connect(ui->planSet,              SIGNAL(currentChanged(int)),     this, SLOT(onTabChanged(int)));
+  connect(ui->planSet,              SIGNAL(tabCloseRequested(int)),  this, SLOT(onTabClose(int)));
+  connect(ui->actionShowProperties, SIGNAL(toggled(bool)),           ui->dockWidget, SLOT(setVisible(bool)));
+  connect(ui->dockWidget,           SIGNAL(visibilityChanged(bool)), ui->actionShowProperties, SLOT(setChecked(bool)));
+  connect(mToolActions,             SIGNAL(triggered(QAction*)),     this, SLOT(toolChanged(QAction*)));
 }
 
 void MainWindow::setupPropertiesSidebar() {
@@ -468,7 +476,6 @@ void MainWindow::setupPropertiesSidebar() {
   CollapsibleWidget *generalCollapsible = new CollapsibleWidget(tr("Properties"), general, this);
   ui->propertiesWidget->layout()->addWidget(generalCollapsible);
 
-  connect(generalCollapsible, SIGNAL(collapseChanged(bool)), this, SLOT(onCollapsiblesChange()));
   connect(generalApply, SIGNAL(clicked()), this, SLOT(onGeneralApplyClicked()));
 
   // Viewport options
@@ -481,21 +488,18 @@ void MainWindow::setupPropertiesSidebar() {
   layout = new QGridLayout(viewport);
   layout->setMargin(0);
   layout->addWidget(mViewport,     0, 0, 2, 4);
-  layout->addWidget(viewportReset, 2, 0, 1, 2);
-  layout->addWidget(viewportApply, 2, 2, 1, 2);
+  layout->addWidget(viewportApply, 2, 0, 1, 2);
+  layout->addWidget(viewportReset, 2, 2, 1, 2);
 
   CollapsibleWidget *viewportCollapsible = new CollapsibleWidget(tr("Viewport"), viewport, this);
   ui->propertiesWidget->layout()->addWidget(viewportCollapsible);
 
-  connect(viewportCollapsible, SIGNAL(collapseChanged(bool)), this, SLOT(onCollapsiblesChange()));
   connect(viewportApply, SIGNAL(clicked()), this, SLOT(onViewportApplyClicked()));
   connect(viewportReset, SIGNAL(clicked()), this, SLOT(onViewportResetClicked()));
 
   // Selection options (Shared)
   mSelectionCollapsible = new CollapsibleWidget(tr("Selection"), nullptr, this);
   ui->propertiesWidget->layout()->addWidget(mSelectionCollapsible);
-
-  connect(mSelectionCollapsible, SIGNAL(collapseChanged(bool)), this, SLOT(onCollapsiblesChange()));
 
   // Selection options (Points)
   mSelectionPoint = new QWidget(this);
@@ -514,8 +518,8 @@ void MainWindow::setupPropertiesSidebar() {
   layout->addWidget(mPointX,         0, 1, 1, 1);
   layout->addWidget(yLabel,          0, 2, 1, 1);
   layout->addWidget(mPointY,         0, 3, 1, 1);
-  layout->addWidget(selectionDelete, 1, 0, 1, 2);
-  layout->addWidget(mPointMove,      1, 2, 1, 2);
+  layout->addWidget(mPointMove,      1, 0, 1, 2);
+  layout->addWidget(selectionDelete, 1, 2, 1, 2);
 
   connect(mPointMove, SIGNAL(clicked()), this, SLOT(onPointMoveClicked()));
   connect(selectionDelete, SIGNAL(clicked()), this, SLOT(onPointDeleteClicked()));
@@ -535,6 +539,18 @@ void MainWindow::setupPropertiesSidebar() {
   layout->addWidget(selectionSplitLine, 1, 0, 1, 1);
 
   connect(selectionSplitLine, SIGNAL(clicked()), this, SLOT(onLineSplitClicked()));
+
+  // Make all the widgets the same size
+  QSize minSize = general->sizeHint();
+  minSize = minSize.expandedTo(viewport->sizeHint());
+  minSize = minSize.expandedTo(mSelectionPoint->sizeHint());
+  minSize = minSize.expandedTo(mSelectionLine->sizeHint());
+
+  general->setMinimumSize(minSize);
+  viewport->setMinimumSize(minSize);
+  mSelectionPoint->setMinimumSize(minSize);
+  mSelectionLine->setMinimumSize(minSize);
+  ui->dockWidget->setMinimumSize(generalCollapsible->sizeHint() + QSize(5, 5));
 
   resetInputsToDefault();
 }

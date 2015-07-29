@@ -67,6 +67,8 @@ public slots:
   void setGridVisible(bool visible);
   void setSelectionMode(SelectionMode mode);
 
+  void selectAllPoints();
+  void invertPointsOrder();
   void changeSelectedPoint(const flat::Point2& point);
   void deleteSelectedPoints();
   void splitSelectedLine();
