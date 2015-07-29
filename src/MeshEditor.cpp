@@ -1,13 +1,13 @@
 #include "MeshEditor.h"
 
 #include "Configuration.h"
+#include "GraphicsLineItem.h"
+#include "GraphicsPointItem.h"
 #include "GridGraphicsView.h"
 
 #include <FlatMesher/Utils.h>
 
 #include <QGridLayout>
-#include <QGraphicsEllipseItem>
-#include <QGraphicsItem>
 #include <QGraphicsScene>
 #include <QScrollBar>
 #include <QUndoStack>
@@ -15,7 +15,8 @@
 #include <vector>
 
 MeshEditor::MeshEditor(QWidget *parent): QWidget(parent),
-    mTriangleSize(config::DEFAULT_TRIANGLE_SZ), mWallsHeight(config::DEFAULT_WALLS_HEIGHT) {
+    mTriangleSize(config::DEFAULT_TRIANGLE_SZ), mWallsHeight(config::DEFAULT_WALLS_HEIGHT),
+    mFirstPoint(nullptr), mPointsAmount(0) {
   mUndoStack = new QUndoStack(this);
   mCurrentMode = SelectionMode::Selection;
 
@@ -47,8 +48,14 @@ MeshEditor::MeshEditor(const QString& fileName, const flat::FloorPlan& plan, QWi
 
 flat::FloorPlan MeshEditor::plan() const {
   std::vector<flat::Point2> points;
-  for (QGraphicsItem* i: mPointsList)
-    points.push_back(mapToFlat(i->data(0).toPointF()));
+
+  GraphicsPointItem* point = mFirstPoint;
+  if (point) {
+    do {
+      points.push_back(point->flatPoint());
+      point = point->outputLine()->dest();
+    } while (point && point != mFirstPoint);
+  }
 
   flat::FloorPlan plan;
   plan.setTriangleSize(mTriangleSize);
@@ -71,19 +78,19 @@ flat::Rectangle MeshEditor::viewport() const {
 }
 
 int MeshEditor::pointCount() const {
-  return mPointsList.size();
+  return mPointsAmount;
 }
 
 SelectedItems MeshEditor::selectionType() const {
   QList<QGraphicsItem*> selected = mScene->selectedItems();
-  QGraphicsEllipseItem *ellipse;
+  GraphicsPointItem *point;
 
   switch (selected.size()) {
   case 0:
     return SelectedItems::None;
   case 1:
-    ellipse = dynamic_cast<QGraphicsEllipseItem*>(selected.first());
-    return ellipse == nullptr? SelectedItems::Line : SelectedItems::Point;
+    point = dynamic_cast<GraphicsPointItem*>(selected.first());
+    return point == nullptr? SelectedItems::Line : SelectedItems::Point;
   default:
     return SelectedItems::PointSet;
   }
@@ -94,11 +101,8 @@ flat::Point2 MeshEditor::selectedPoint() const {
   if (selected.size() != 1)
     return flat::Point2();
 
-  QGraphicsEllipseItem *point = dynamic_cast<QGraphicsEllipseItem*>(selected.first());
-  if (point == nullptr)
-    return flat::Point2();
-
-  return mapToFlat(point->data(0).toPointF());
+  GraphicsPointItem *point = dynamic_cast<GraphicsPointItem*>(selected.first());
+  return point == nullptr? flat::Point2() : point->flatPoint();
 }
 
 QList<flat::Point2> MeshEditor::selectedPoints() const {
@@ -106,9 +110,9 @@ QList<flat::Point2> MeshEditor::selectedPoints() const {
   QList<QGraphicsItem*> selected = mScene->selectedItems();
 
   for (QGraphicsItem* i: selected) {
-    QGraphicsEllipseItem *ellipse = dynamic_cast<QGraphicsEllipseItem*>(i);
-    if (ellipse != nullptr)
-      result.append(mapToFlat(ellipse->data(0).toPointF()));
+    GraphicsPointItem *point = dynamic_cast<GraphicsPointItem*>(i);
+    if (point != nullptr)
+      result.append(point->flatPoint());
   }
 
   return result;
@@ -119,7 +123,7 @@ flat::Line2 MeshEditor::selectedLine() const {
   if (selected.size() != 1)
     return flat::Line2();
 
-  QGraphicsLineItem *line = dynamic_cast<QGraphicsLineItem*>(selected.first());
+  GraphicsLineItem *line = dynamic_cast<GraphicsLineItem*>(selected.first());
   if (line == nullptr)
     return flat::Line2();
 
@@ -261,35 +265,55 @@ void MeshEditor::setPlan(const flat::FloorPlan& plan) {
   mTriangleSize = plan.getTriangleSize();
   mView->setCellsSize(mTriangleSize);
 
-  QPen pen(Qt::black, 2);
-  pen.setCosmetic(true);
-  QBrush brush(Qt::blue);
-
-  QSizeF size(0.25, 0.25);
   std::vector<flat::Point2> points = plan.getNodes();
+  removePoints();
 
-  for (unsigned i = 0; i < points.size(); ++i) {
-    QPointF current = mapFromFlat(points[i]);
-    QPointF next = mapFromFlat(points[(i + 1) % points.size()]);
+  if (points.size() > 2) {
+    GraphicsPointItem *prevPoint = new GraphicsPointItem(points[0]);
+    mScene->addItem(prevPoint);
+    mFirstPoint = prevPoint;
 
-    QRectF box(current.x() - size.width() / 2.0,
-               current.y() - size.height() / 2.0,
-               size.width(), size.height());
+    ++mPointsAmount;
 
-    QGraphicsEllipseItem *point = mScene->addEllipse(box, pen, brush);
-    point->setFlag(QGraphicsItem::ItemIsSelectable);
-    point->setAcceptHoverEvents(true);
-    point->setData(0, current);
-    point->setBoundingRegionGranularity(1.0);
+    for (unsigned i = 1; i < points.size(); ++i) {
+      GraphicsPointItem *actPoint = new GraphicsPointItem(points[i]);
+      GraphicsLineItem *line = new GraphicsLineItem(prevPoint, actPoint);
 
-    mPointsList.insert(point);
+      mScene->addItem(line);
+      mScene->addItem(actPoint);
 
-    QGraphicsLineItem *line = mScene->addLine(QLineF(current, next), pen);
-    line->setFlag(QGraphicsItem::ItemIsSelectable);
-    line->setBoundingRegionGranularity(1.0);
-    line->setAcceptHoverEvents(true);
-    line->setZValue(-1.0);
+      prevPoint->setOutputLine(line);
+      actPoint->setInputLine(line);
+
+      ++mPointsAmount;
+      prevPoint = actPoint;
+    }
+
+    GraphicsLineItem *line = new GraphicsLineItem(prevPoint, mFirstPoint);
+    mScene->addItem(line);
+
+    prevPoint->setOutputLine(line);
+    mFirstPoint->setInputLine(line);
+
+    prevPoint->setHighlighted(true);
   }
 
   emit pointsAmountChanged(pointsAmount - pointCount());
+}
+
+void MeshEditor::removePoints() {
+  while (mPointsAmount > 0) {
+    Q_ASSERT(mFirstPoint != nullptr);
+
+    GraphicsPointItem *next = nullptr;
+    if (mFirstPoint->outputLine())
+      next = mFirstPoint->outputLine()->dest();
+
+    delete mFirstPoint;
+    mFirstPoint = next;
+    --mPointsAmount;
+  }
+
+  mFirstPoint = nullptr;
+  Q_ASSERT(mPointsAmount == 0);
 }

@@ -14,6 +14,7 @@
 #include "SelectedItems.h"
 #include "SelectionMode.h"
 
+class GraphicsPointItem;
 class GridGraphicsView;
 class QGraphicsItem;
 class QGraphicsScene;
@@ -83,12 +84,15 @@ protected slots:
 protected:
   void setPlan(const flat::FloorPlan& plan);
   void setViewport(const QRectF& sceneRect);
+  void removePoints();
 
 private:
   QString mFileName;
   double mTriangleSize, mWallsHeight;
 
-  QSet<QGraphicsItem*> mPointsList;
+  GraphicsPointItem* mFirstPoint;
+  int mPointsAmount;
+
   QUndoStack *mUndoStack;
   SelectionMode mCurrentMode;
 

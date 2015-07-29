@@ -37,7 +37,6 @@ void GridGraphicsView::setGridVisible(bool visible) {
 
 void GridGraphicsView::drawBackground(QPainter *painter, const QRectF &rect) {
   if (mGridVisible) {
-    painter->save();
     painter->setPen(QPen(Qt::black, 0, Qt::DotLine));
 
     double left = std::ceil(rect.left() / mCellsSize) * mCellsSize;
@@ -50,7 +49,6 @@ void GridGraphicsView::drawBackground(QPainter *painter, const QRectF &rect) {
       lines.append(QLineF(rect.left(), y, rect.right(), y));
 
     painter->drawLines(lines.data(), lines.size());
-    painter->restore();
   }
 }
 

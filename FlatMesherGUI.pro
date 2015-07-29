@@ -19,7 +19,9 @@ SOURCES += src/Main.cpp\
     src/ViewportControls.cpp \
     src/MeshEditor.cpp \
     src/Configuration.cpp \
-    src/GridGraphicsView.cpp
+    src/GridGraphicsView.cpp \
+    src/GraphicsPointItem.cpp \
+    src/GraphicsLineItem.cpp
 
 HEADERS  += include/MainWindow.h \
     include/CollapsibleWidget.h \
@@ -29,7 +31,9 @@ HEADERS  += include/MainWindow.h \
     include/SelectionMode.h \
     include/MeshEditor.h \
     include/GridGraphicsView.h \
-    include/SelectedItems.h
+    include/SelectedItems.h \
+    include/GraphicsPointItem.h \
+    include/GraphicsLineItem.h
 
 QMAKE_CXXFLAGS += -fopenmp
 
