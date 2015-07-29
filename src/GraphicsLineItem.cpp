@@ -56,7 +56,7 @@ void GraphicsLineItem::updateEnds() {
     setLine(QLineF());
 }
 
-GraphicsPointItem* GraphicsLineItem::splitLine() {
+QPair<GraphicsPointItem*, GraphicsLineItem*> GraphicsLineItem::splitLine() {
   if (mSrc && mDest) {
     flat::Point2 src = mSrc->flatPoint();
     flat::Point2 dest = mDest->flatPoint();
@@ -71,8 +71,8 @@ GraphicsPointItem* GraphicsLineItem::splitLine() {
     mDest->setInputLine(nextLine);
     setDest(middlePoint);
 
-    return middlePoint;
+    return {middlePoint, nextLine};
   }
 
-  return nullptr;
+  return {nullptr, nullptr};
 }

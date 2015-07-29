@@ -2,6 +2,7 @@
 #define GRAPHICSLINEITEM
 
 #include <QGraphicsLineItem>
+#include <QPair>
 
 class GraphicsPointItem;
 
@@ -19,7 +20,7 @@ public:
 
   void invertConnection();
   void updateEnds();
-  GraphicsPointItem* splitLine();
+  QPair<GraphicsPointItem*, GraphicsLineItem*> splitLine();
 
 private:
   GraphicsPointItem *mSrc, *mDest;

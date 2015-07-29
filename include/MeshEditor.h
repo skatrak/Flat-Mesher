@@ -14,6 +14,7 @@
 #include "SelectedItems.h"
 #include "SelectionMode.h"
 
+class GraphicsLineItem;
 class GraphicsPointItem;
 class GridGraphicsView;
 class QGraphicsItem;
@@ -33,9 +34,9 @@ public:
   int pointCount() const;
 
   SelectedItems selectionType() const;
-  flat::Point2 selectedPoint() const;
-  QList<flat::Point2> selectedPoints() const;
-  flat::Line2 selectedLine() const;
+  flat::Point2 selectedPoint();
+  QList<flat::Point2> selectedPoints();
+  flat::Line2 selectedLine();
 
   bool isGridVisible() const;
   bool isSaved() const;
@@ -85,6 +86,10 @@ protected:
   void setPlan(const flat::FloorPlan& plan);
   void setViewport(const QRectF& sceneRect);
   void removePoints();
+
+  GraphicsPointItem* selectedPointItem();
+  QList<GraphicsPointItem*> selectedPointItems();
+  GraphicsLineItem* selectedLineItem();
 
 private:
   QString mFileName;

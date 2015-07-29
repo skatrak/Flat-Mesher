@@ -96,38 +96,26 @@ SelectedItems MeshEditor::selectionType() const {
   }
 }
 
-flat::Point2 MeshEditor::selectedPoint() const {
-  QList<QGraphicsItem*> selected = mScene->selectedItems();
-  if (selected.size() != 1)
-    return flat::Point2();
-
-  GraphicsPointItem *point = dynamic_cast<GraphicsPointItem*>(selected.first());
-  return point == nullptr? flat::Point2() : point->flatPoint();
+flat::Point2 MeshEditor::selectedPoint() {
+  GraphicsPointItem *point = selectedPointItem();
+  return point? point->flatPoint() : flat::Point2();
 }
 
-QList<flat::Point2> MeshEditor::selectedPoints() const {
-  QList<flat::Point2> result;
-  QList<QGraphicsItem*> selected = mScene->selectedItems();
+QList<flat::Point2> MeshEditor::selectedPoints() {
+  QList<GraphicsPointItem*> selected = selectedPointItems();
 
-  for (QGraphicsItem* i: selected) {
-    GraphicsPointItem *point = dynamic_cast<GraphicsPointItem*>(i);
-    if (point != nullptr)
-      result.append(point->flatPoint());
-  }
+  QList<flat::Point2> result;
+  result.reserve(selected.size());
+
+  for (GraphicsPointItem *i: selected)
+    result << i->flatPoint();
 
   return result;
 }
 
-flat::Line2 MeshEditor::selectedLine() const {
-  QList<QGraphicsItem*> selected = mScene->selectedItems();
-  if (selected.size() != 1)
-    return flat::Line2();
-
-  GraphicsLineItem *line = dynamic_cast<GraphicsLineItem*>(selected.first());
-  if (line == nullptr)
-    return flat::Line2();
-
-  return mapToFlat(line->line());
+flat::Line2 MeshEditor::selectedLine() {
+  GraphicsLineItem *line = selectedLineItem();
+  return line? mapToFlat(line->line()) : flat::Line2();
 }
 
 bool MeshEditor::isGridVisible() const {
@@ -217,15 +205,45 @@ void MeshEditor::setSelectionMode(SelectionMode mode) {
 }
 
 void MeshEditor::changeSelectedPoint(const flat::Point2& point) {
-
+  GraphicsPointItem *pointItem = selectedPointItem();
+  if (pointItem)
+    pointItem->setFlatPoint(point);
 }
 
 void MeshEditor::deleteSelectedPoints() {
+  QList<GraphicsPointItem*> points = selectedPointItems();
+  for (GraphicsPointItem *point: points) {
+    if (point == mFirstPoint) {
+      if (point->outputLine())
+        mFirstPoint = point->outputLine()->dest();
+      else
+        mFirstPoint = nullptr;
+    }
+    else if (point->outputLine() &&
+             point->outputLine()->dest() == mFirstPoint &&
+             point->inputLine() &&
+             point->inputLine()->src())
+        point->inputLine()->src()->setHighlighted(true);
 
+    delete point;
+  }
 }
 
 void MeshEditor::splitSelectedLine() {
+  GraphicsLineItem *line = selectedLineItem();
+  if (line) {
+    QPair<GraphicsPointItem*, GraphicsLineItem*> pair = line->splitLine();
+    GraphicsPointItem *point = pair.first;
+    GraphicsLineItem *newLine = pair.second;
 
+    if (point->outputLine()->dest() == mFirstPoint) {
+      point->setHighlighted(true);
+      point->inputLine()->src()->setHighlighted(false);
+    }
+
+    mScene->addItem(newLine);
+    mScene->addItem(point);
+  }
 }
 
 void MeshEditor::onScrollBarMoved() {
@@ -316,4 +334,32 @@ void MeshEditor::removePoints() {
 
   mFirstPoint = nullptr;
   Q_ASSERT(mPointsAmount == 0);
+}
+
+GraphicsPointItem* MeshEditor::selectedPointItem() {
+  QList<QGraphicsItem*> selected = mScene->selectedItems();
+  if (selected.isEmpty() || selected.size() > 1)
+    return nullptr;
+
+  return dynamic_cast<GraphicsPointItem*>(selected.first());
+}
+
+QList<GraphicsPointItem*> MeshEditor::selectedPointItems() {
+  QList<QGraphicsItem*> selected = mScene->selectedItems();
+  QList<GraphicsPointItem*> points;
+
+  for (QGraphicsItem *i: selected) {
+    if (GraphicsPointItem *point = dynamic_cast<GraphicsPointItem*>(i))
+      points << point;
+  }
+
+  return points;
+}
+
+GraphicsLineItem* MeshEditor::selectedLineItem() {
+  QList<QGraphicsItem*> selected = mScene->selectedItems();
+  if (selected.isEmpty() || selected.size() > 1)
+    return nullptr;
+
+  return dynamic_cast<GraphicsLineItem*>(selected.first());
 }
