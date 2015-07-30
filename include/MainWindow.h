@@ -59,7 +59,7 @@ public slots:
 protected slots:
   void onCursorMoved(const flat::Point2& pos);
   void onViewportChanged(const flat::Rectangle& viewport);
-  void onPointsAmountChanged(int diff);
+  void onPointsAmountChanged(int amount);
   void onSelectionChanged(SelectedItems selectionType);
 
 protected:
@@ -107,7 +107,7 @@ private:
   QLabel *mLineLength, *mLineSlope;
 
   // Status bar
-  QLabel *mCursorPos, *mElementCounter;
+  QLabel *mCursorPos, *mPointsCounter;
 
 };
 

@@ -76,7 +76,7 @@ public slots:
 signals:
   void cursorMoved(const flat::Point2& point);
   void viewportChanged(const flat::Rectangle& viewport);
-  void pointsAmountChanged(int diff);
+  void pointsAmountChanged(int amount);
   void selectionChanged(SelectedItems selectionType);
 
 protected slots:

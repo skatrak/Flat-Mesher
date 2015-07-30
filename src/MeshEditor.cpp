@@ -34,8 +34,8 @@ MeshEditor::MeshEditor(QWidget *parent): QWidget(parent),
                      config::DEFAULT_VIEWPORT_MIN_X, config::DEFAULT_VIEWPORT_MAX_X);
   setViewport(vp);
 
-  connect(mScene,                       SIGNAL(selectionChanged()), this, SLOT(onSelectionChanged()));
-  connect(mView,                        SIGNAL(mouseMoved(QPoint)), this, SLOT(onMouseMoved(QPoint)));
+  connect(mScene,                       SIGNAL(selectionChanged()),  this, SLOT(onSelectionChanged()));
+  connect(mView,                        SIGNAL(mouseMoved(QPoint)),  this, SLOT(onMouseMoved(QPoint)));
   connect(mView->horizontalScrollBar(), SIGNAL(valueChanged(int)),   this, SLOT(onScrollBarMoved()));
   connect(mView->verticalScrollBar(),   SIGNAL(valueChanged(int)),   this, SLOT(onScrollBarMoved()));
 }
@@ -255,6 +255,8 @@ void MeshEditor::deleteSelectedPoints() {
 
     delete point;
   }
+
+  emit pointsAmountChanged(pointCount());
 }
 
 void MeshEditor::splitSelectedLine() {
@@ -272,6 +274,8 @@ void MeshEditor::splitSelectedLine() {
     mScene->addItem(newLine);
     mScene->addItem(point);
   }
+
+  emit pointsAmountChanged(pointCount());
 }
 
 void MeshEditor::onScrollBarMoved() {
@@ -306,8 +310,6 @@ void MeshEditor::onMouseMoved(const QPoint& pos) {
 }
 
 void MeshEditor::setPlan(const flat::FloorPlan& plan) {
-  int pointsAmount = pointCount();
-
   mTriangleSize = plan.getTriangleSize();
   mView->setCellsSize(mTriangleSize);
 
@@ -344,7 +346,7 @@ void MeshEditor::setPlan(const flat::FloorPlan& plan) {
     prevPoint->setHighlighted(true);
   }
 
-  emit pointsAmountChanged(pointsAmount - pointCount());
+  emit pointsAmountChanged(pointCount());
 }
 
 void MeshEditor::removePoints() {
@@ -362,6 +364,8 @@ void MeshEditor::removePoints() {
 
   mFirstPoint = nullptr;
   Q_ASSERT(mPointsAmount == 0);
+
+  emit pointsAmountChanged(0);
 }
 
 GraphicsPointItem* MeshEditor::selectedPointItem() {

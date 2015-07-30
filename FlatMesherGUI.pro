@@ -21,7 +21,8 @@ SOURCES += src/Main.cpp\
     src/Configuration.cpp \
     src/GridGraphicsView.cpp \
     src/GraphicsPointItem.cpp \
-    src/GraphicsLineItem.cpp
+    src/GraphicsLineItem.cpp \
+    src/MeshAnalyzer.cpp
 
 HEADERS  += include/MainWindow.h \
     include/CollapsibleWidget.h \
@@ -33,7 +34,8 @@ HEADERS  += include/MainWindow.h \
     include/GridGraphicsView.h \
     include/SelectedItems.h \
     include/GraphicsPointItem.h \
-    include/GraphicsLineItem.h
+    include/GraphicsLineItem.h \
+    include/MeshAnalyzer.h
 
 QMAKE_CXXFLAGS += -fopenmp
 
@@ -42,7 +44,8 @@ LIBS += -fopenmp -L"$$_PRO_FILE_PWD_/libs/" -lFlatMesher
 INCLUDEPATH += include\
         ../FlatMesher/include
 
-FORMS    += forms/MainWindow.ui
+FORMS    += forms/MainWindow.ui \
+    forms/MeshAnalyzer.ui
 
 RESOURCES += \
     res/Images.qrc

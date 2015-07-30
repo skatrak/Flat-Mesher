@@ -4,6 +4,7 @@
 #include "CollapsibleWidget.h"
 #include "Configuration.h"
 #include "FileManager.h"
+#include "MeshAnalyzer.h"
 #include "MeshEditor.h"
 #include "ViewportControls.h"
 
@@ -148,8 +149,11 @@ void MainWindow::toolChanged(QAction *toolAction) {
 }
 
 void MainWindow::findProblems() {
-  // TODO Create the PlanErrorChecker subclass that creates a QString with the
-  // TODO problems found and put that string inside a dialog
+  if (mCurrentEditor) {
+    MeshAnalyzer *analyzer = new MeshAnalyzer(this);
+    analyzer->show();
+    analyzer->processMesh(mCurrentEditor->plan());
+  }
 }
 
 void MainWindow::invertPoints() {
@@ -172,8 +176,8 @@ void MainWindow::onViewportChanged(const flat::Rectangle& viewport) {
     mViewport->setViewport(viewport);
 }
 
-void MainWindow::onPointsAmountChanged(int /*diff*/) {
-  mElementCounter->setText(tr("%1 elements").arg(mCurrentEditor->pointCount()));
+void MainWindow::onPointsAmountChanged(int amount) {
+  mPointsCounter->setText(tr("%1 points").arg(amount));
 }
 
 void MainWindow::onSelectionChanged(SelectedItems selectionType) {
@@ -253,6 +257,7 @@ void MainWindow::onTabChanged(int tabIndex) {
     mViewport->setViewport(mCurrentEditor->viewport());
 
     onSelectionChanged(mCurrentEditor->selectionType());
+    onPointsAmountChanged(mCurrentEditor->pointCount());
 
     connect(mCurrentEditor, SIGNAL(cursorMoved(flat::Point2)), this, SLOT(onCursorMoved(flat::Point2)));
     connect(mCurrentEditor, SIGNAL(viewportChanged(flat::Rectangle)), this, SLOT(onViewportChanged(flat::Rectangle)));
@@ -266,6 +271,7 @@ void MainWindow::onTabChanged(int tabIndex) {
     mCurrentEditor = nullptr;
     mUndoGroup->setActiveStack(nullptr);
     onSelectionChanged(SelectedItems::None);
+    onPointsAmountChanged(0);
 
     editorAvailable(false);
     resetInputsToDefault();
@@ -557,8 +563,8 @@ void MainWindow::setupPropertiesSidebar() {
 
 void MainWindow::setupStatusBar() {
   mCursorPos = new QLabel("(X = 0.00, Y = 0.00)", this);
-  mElementCounter = new QLabel(tr("%1 elements").arg(0), this);
+  mPointsCounter = new QLabel(tr("%1 points").arg(0), this);
 
   ui->statusBar->addWidget(mCursorPos, 1);
-  ui->statusBar->addWidget(mElementCounter);
+  ui->statusBar->addWidget(mPointsCounter);
 }
