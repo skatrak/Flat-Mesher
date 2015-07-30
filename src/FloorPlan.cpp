@@ -44,6 +44,8 @@ bool FloorPlan::checkErrors(PlanErrorChecker* checker) const {
   if (!checker)
     return false;
 
+  checker->visitCheckBasicProperties();
+
   // Check if the number of nodes is enough
   size_t sz_nodes = m_nodes.size();
   if (sz_nodes < 3 && checker->visitInsufficientNodes(sz_nodes))
@@ -57,6 +59,8 @@ bool FloorPlan::checkErrors(PlanErrorChecker* checker) const {
   double tmp = m_height / m_triangle_sz;
   if ((!utils::isInteger(tmp) || tmp <= 0.0) && checker->visitInvalidHeight(m_height))
     return false;
+
+  checker->visitCheckSegmentsProperties();
 
   double total = 0.0;
   for (size_t i = 1; i <= sz_nodes; ++i) {
@@ -81,9 +85,14 @@ bool FloorPlan::checkErrors(PlanErrorChecker* checker) const {
     total += (b.getX() - a.getX()) * (a.getY() + b.getY());
   }
 
+  checker->visitCheckPointsOrder();
+
   // Points are not expressed in CCW order
   if (total >= 0.0 && checker->visitNotCCWOrder())
     return false;
+
+  checker->visitCheckRepeatedPoints();
+  checker->visitCheckSegmentsIntersections();
 
   // Check if there are no repeated points or intersecting segments
   for (size_t i = 0; i < sz_nodes - 1; ++i) {
@@ -146,7 +155,7 @@ bool FloorPlan::pointInside(const Point2& p) const {
       Point2 y = y_start + (segment * Q_POINTS[j]);
       double norm_xy = p.distance(y);
 
-      local_integral += (-1.0 / (2 * utils::M_PI) * Point2::dot(p-y, normal) /
+      local_integral += (-1.0 / (2 * utils::PI) * Point2::dot(p-y, normal) /
                          (norm_xy * norm_xy)) * Q_WEIGHTS[j];
     }
 

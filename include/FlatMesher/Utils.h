@@ -5,7 +5,7 @@
 
 namespace flat { namespace utils {
 
-const double M_PI = 3.14159265358979323846;
+const double PI = 3.14159265358979323846;
 const double DOUBLE_EPSILON = 0.00001;
 
 inline bool isInteger(double n) {
