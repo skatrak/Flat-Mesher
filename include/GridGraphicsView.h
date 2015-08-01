@@ -20,12 +20,16 @@ public slots:
 
 signals:
   void mouseMoved(const QPoint& pos);
+  void mousePressed(const QPoint& pos);
+  void mouseReleased(const QPoint& pos);
 
 protected:
   void drawBackground(QPainter *painter, const QRectF &rect);
 
   virtual void wheelEvent(QWheelEvent *event);
   virtual void mouseMoveEvent(QMouseEvent *event);
+  virtual void mousePressEvent(QMouseEvent *event);
+  virtual void mouseReleaseEvent(QMouseEvent *event);
 
 private:
   double mCellsSize;

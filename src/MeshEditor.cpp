@@ -12,11 +12,12 @@
 #include <QScrollBar>
 #include <QUndoStack>
 
+#include <cmath>
 #include <vector>
 
 MeshEditor::MeshEditor(QWidget *parent): QWidget(parent),
     mTriangleSize(config::DEFAULT_TRIANGLE_SZ), mWallsHeight(config::DEFAULT_WALLS_HEIGHT),
-    mFirstPoint(nullptr), mPointsAmount(0) {
+    mFirstPoint(nullptr), mPointsAmount(0), mMousePressed(false) {
   mUndoStack = new QUndoStack(this);
   mCurrentMode = SelectionMode::Selection;
 
@@ -34,10 +35,12 @@ MeshEditor::MeshEditor(QWidget *parent): QWidget(parent),
                      config::DEFAULT_VIEWPORT_MIN_X, config::DEFAULT_VIEWPORT_MAX_X);
   setViewport(vp);
 
-  connect(mScene,                       SIGNAL(selectionChanged()),  this, SLOT(onSelectionChanged()));
-  connect(mView,                        SIGNAL(mouseMoved(QPoint)),  this, SLOT(onMouseMoved(QPoint)));
-  connect(mView->horizontalScrollBar(), SIGNAL(valueChanged(int)),   this, SLOT(onScrollBarMoved()));
-  connect(mView->verticalScrollBar(),   SIGNAL(valueChanged(int)),   this, SLOT(onScrollBarMoved()));
+  connect(mScene,                       SIGNAL(selectionChanged()),    this, SLOT(onSelectionChanged()));
+  connect(mView,                        SIGNAL(mouseMoved(QPoint)),    this, SLOT(onMouseMoved(QPoint)));
+  connect(mView,                        SIGNAL(mousePressed(QPoint)),  this, SLOT(onMousePressed(QPoint)));
+  connect(mView,                        SIGNAL(mouseReleased(QPoint)), this, SLOT(onMouseReleased(QPoint)));
+  connect(mView->horizontalScrollBar(), SIGNAL(valueChanged(int)),     this, SLOT(onScrollBarMoved()));
+  connect(mView->verticalScrollBar(),   SIGNAL(valueChanged(int)),     this, SLOT(onScrollBarMoved()));
 }
 
 MeshEditor::MeshEditor(const QString& fileName, const flat::FloorPlan& plan, QWidget *parent):
@@ -53,6 +56,9 @@ flat::FloorPlan MeshEditor::plan() const {
   if (point) {
     do {
       points.push_back(point->flatPoint());
+      if (!point->outputLine())
+        break;
+
       point = point->outputLine()->dest();
     } while (point && point != mFirstPoint);
   }
@@ -150,6 +156,13 @@ QRectF MeshEditor::mapFromFlat(const flat::Rectangle& rect) {
   return QRectF(rect.getLeft(), -rect.getTop(), rect.getWidth(), rect.getHeight());
 }
 
+QPointF MeshEditor::snapToGrid(const QPointF& point, double triangleSize) {
+  double x = std::round(point.x() / triangleSize) * triangleSize;
+  double y = std::round(point.y() / triangleSize) * triangleSize;
+
+  return QPointF(x, y);
+}
+
 void MeshEditor::setFileName(const QString& fileName) {
   mFileName = fileName;
 }
@@ -209,6 +222,9 @@ void MeshEditor::selectAllPoints() {
   if (point) {
     do {
       point->setSelected(true);
+      if (!point->outputLine())
+        break;
+
       point->outputLine()->setSelected(false);
       point = point->outputLine()->dest();
     } while (point && point != mFirstPoint);
@@ -219,6 +235,9 @@ void MeshEditor::invertPointsOrder() {
   GraphicsPointItem* point = mFirstPoint;
   if (point) {
     do {
+      if (!point->outputLine())
+        break;
+
       GraphicsPointItem* next = point->outputLine()->dest();
       point->outputLine()->invertConnection();
       point->invertConnection();
@@ -230,6 +249,52 @@ void MeshEditor::invertPointsOrder() {
       mFirstPoint->inputLine()->src()->setHighlighted(true);
     }
   }
+}
+
+void MeshEditor::addPoint(const flat::Point2& point) {
+  if (!mFirstPoint) {
+    mFirstPoint = new GraphicsPointItem(point);
+    mFirstPoint->cellSizeChanged(mTriangleSize);
+    mScene->addItem(mFirstPoint);
+  }
+  else {
+    if (pointCount() == 1) {
+      GraphicsPointItem *newPoint = new GraphicsPointItem(point);
+      newPoint->cellSizeChanged(mTriangleSize);
+
+      GraphicsLineItem *l1 = new GraphicsLineItem(mFirstPoint, newPoint);
+      GraphicsLineItem *l2 = new GraphicsLineItem(newPoint, mFirstPoint);
+      l1->cellSizeChanged(mTriangleSize);
+      l2->cellSizeChanged(mTriangleSize);
+
+      mFirstPoint->setOutputLine(l1);
+      mFirstPoint->setInputLine(l2);
+      newPoint->setOutputLine(l2);
+      newPoint->setInputLine(l1);
+
+      mFirstPoint->setHighlighted(false);
+      newPoint->setHighlighted(true);
+
+      mScene->addItem(newPoint);
+      mScene->addItem(l1);
+      mScene->addItem(l2);
+    }
+    else {
+      GraphicsLineItem *iLine = mFirstPoint->inputLine();
+      iLine->src()->setHighlighted(false);
+
+      QPair<GraphicsPointItem*, GraphicsLineItem*> pair = iLine->splitLine();
+      mScene->addItem(pair.first);
+      mScene->addItem(pair.second);
+
+      pair.first->setHighlighted(true);
+      pair.first->setFlatPoint(point);
+      pair.first->cellSizeChanged(mTriangleSize);
+      pair.second->cellSizeChanged(mTriangleSize);
+    }
+  }
+
+  emit pointsAmountChanged(++mPointsAmount);
 }
 
 void MeshEditor::changeSelectedPoint(const flat::Point2& point) {
@@ -256,6 +321,7 @@ void MeshEditor::deleteSelectedPoints() {
     delete point;
   }
 
+  mPointsAmount -= points.size();
   emit pointsAmountChanged(pointCount());
 }
 
@@ -266,6 +332,9 @@ void MeshEditor::splitSelectedLine() {
     GraphicsPointItem *point = pair.first;
     GraphicsLineItem *newLine = pair.second;
 
+    point->cellSizeChanged(mTriangleSize);
+    newLine->cellSizeChanged(mTriangleSize);
+
     if (point->outputLine()->dest() == mFirstPoint) {
       point->setHighlighted(true);
       point->inputLine()->src()->setHighlighted(false);
@@ -275,7 +344,7 @@ void MeshEditor::splitSelectedLine() {
     mScene->addItem(point);
   }
 
-  emit pointsAmountChanged(pointCount());
+  emit pointsAmountChanged(++mPointsAmount);
 }
 
 void MeshEditor::onScrollBarMoved() {
@@ -306,7 +375,50 @@ void MeshEditor::setViewport(const QRectF& sceneRect) {
 }
 
 void MeshEditor::onMouseMoved(const QPoint& pos) {
+  if (mMousePressed) {
+    GraphicsPointItem* point = mFirstPoint;
+    if (point) {
+      do {
+        GraphicsLineItem* line = point->outputLine();
+        if (!line)
+          break;
+
+        line->setFlag(QGraphicsItem::ItemIsSelectable, false);
+        point = line->dest();
+      } while (point && point != mFirstPoint);
+    }
+  }
+
   emit cursorMoved(mapToFlat(mView->mapToScene(pos)));
+}
+
+void MeshEditor::onMousePressed(const QPoint& pos) {
+  mMousePressed = true;
+}
+
+void MeshEditor::onMouseReleased(const QPoint& pos) {
+  mMousePressed = false;
+  GraphicsPointItem* point = mFirstPoint;
+
+  switch (mCurrentMode) {
+  case SelectionMode::AddPoints:
+    addPoint(mapToFlat(snapToGrid(mView->mapToScene(pos), mTriangleSize)));
+    break;
+  case SelectionMode::Selection:
+    if (point) {
+      do {
+        GraphicsLineItem* line = point->outputLine();
+        if (!line)
+          break;
+
+        line->setFlag(QGraphicsItem::ItemIsSelectable, true);
+        point = line->dest();
+      } while (point && point != mFirstPoint);
+    }
+    break;
+  default:
+    break;
+  }
 }
 
 void MeshEditor::setPlan(const flat::FloorPlan& plan) {

@@ -22,6 +22,8 @@ public:
   void updateEnds();
   QPair<GraphicsPointItem*, GraphicsLineItem*> splitLine();
 
+  void cellSizeChanged(double cellSize);
+
 private:
   GraphicsPointItem *mSrc, *mDest;
 

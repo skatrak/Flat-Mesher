@@ -1,26 +1,22 @@
 #include "GraphicsPointItem.h"
 
+#include "Configuration.h"
 #include "GraphicsLineItem.h"
 #include "MeshEditor.h"
 
 #include <QPen>
-
-double GraphicsPointItem::SIZE = 0.375;
 
 GraphicsPointItem::GraphicsPointItem(const flat::Point2& pos, QGraphicsItem *parent):
     QGraphicsEllipseItem(parent), mInputLine(nullptr), mOutputLine(nullptr) {
   setFlatPoint(pos);
 
   setFlag(QGraphicsItem::ItemIsSelectable);
+  setFlag(QGraphicsItem::ItemIsMovable);
+  setFlag(QGraphicsItem::ItemSendsGeometryChanges);
   setAcceptHoverEvents(true);
 
-  QPen pen(Qt::black, 2);
-  pen.setCosmetic(true);
-  setPen(pen);
-
+  cellSizeChanged(config::DEFAULT_TRIANGLE_SZ);
   setHighlighted(false);
-
-  //setBoundingRegionGranularity();
 }
 
 GraphicsPointItem::~GraphicsPointItem() {
@@ -45,12 +41,7 @@ GraphicsPointItem::~GraphicsPointItem() {
 
 void GraphicsPointItem::setFlatPoint(const flat::Point2& point) {
   mPoint = point;
-
-  QPointF position = MeshEditor::mapFromFlat(point);
-  position.rx() -= SIZE / 2.0;
-  position.ry() -= SIZE / 2.0;
-
-  setRect(QRectF(position, QSizeF(SIZE, SIZE)));
+  cellSizeChanged(rect().size().width() * 2);
 
   if (mInputLine)
     mInputLine->updateEnds();
@@ -74,4 +65,36 @@ void GraphicsPointItem::invertConnection() {
   GraphicsLineItem *tmp = mInputLine;
   mInputLine = mOutputLine;
   mOutputLine = tmp;
+}
+
+void GraphicsPointItem::cellSizeChanged(double cellSize) {
+  QPen pen(Qt::black, cellSize / 10);
+  setPen(pen);
+
+  double sz = cellSize / 2;
+  QPointF position = MeshEditor::mapFromFlat(mPoint);
+  mInitialPos = position;
+  setPos(0, 0);
+
+  position.rx() -= sz / 2;
+  position.ry() -= sz / 2;
+
+  setRect(QRectF(position, QSizeF(sz, sz)));
+  mCellSize = cellSize;
+}
+
+QVariant GraphicsPointItem::itemChange(GraphicsItemChange change, const QVariant& value) {
+  if (change == ItemPositionChange && scene()) {
+    QPointF scenePoint = MeshEditor::snapToGrid(value.toPointF(), mCellSize);
+    mPoint = MeshEditor::mapToFlat(mInitialPos + scenePoint);
+
+    if (mInputLine)
+      mInputLine->updateEnds();
+    if (mOutputLine)
+      mOutputLine->updateEnds();
+
+    return scenePoint;
+  }
+
+  return QGraphicsItem::itemChange(change, value);
 }

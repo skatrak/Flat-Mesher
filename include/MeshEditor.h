@@ -53,6 +53,7 @@ public:
   static QPointF mapFromFlat(const flat::Point2& point);
   static QLineF mapFromFlat(const flat::Line2 &line);
   static QRectF mapFromFlat(const flat::Rectangle& rect);
+  static QPointF snapToGrid(const QPointF& point, double triangleSize);
 
 public slots:
   void setFileName(const QString& fileName);
@@ -69,6 +70,7 @@ public slots:
 
   void selectAllPoints();
   void invertPointsOrder();
+  void addPoint(const flat::Point2& point);
   void changeSelectedPoint(const flat::Point2& point);
   void deleteSelectedPoints();
   void splitSelectedLine();
@@ -82,6 +84,8 @@ signals:
 protected slots:
   void onSelectionChanged();
   void onMouseMoved(const QPoint& pos);
+  void onMousePressed(const QPoint& pos);
+  void onMouseReleased(const QPoint& pos);
   void onScrollBarMoved();
 
 protected:
@@ -105,6 +109,8 @@ private:
 
   QGraphicsScene *mScene;
   GridGraphicsView *mView;
+
+  bool mMousePressed;
 
 };
 

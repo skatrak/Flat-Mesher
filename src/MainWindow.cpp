@@ -105,6 +105,7 @@ void MainWindow::saveFlatAs() {
     if (!fileName.isNull()) {
       QString file = fileName.section('/', -1);
       ui->planSet->tabBar()->setTabText(ui->planSet->currentIndex(), file);
+      mCurrentEditor->setFileName(fileName);
     }
   }
 }

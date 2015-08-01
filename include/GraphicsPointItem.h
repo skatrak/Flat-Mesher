@@ -22,10 +22,15 @@ public:
   void setHighlighted(bool highlighted);
   void invertConnection();
 
-  static double SIZE;
+  void cellSizeChanged(double cellSize);
+
+protected:
+  QVariant itemChange(GraphicsItemChange change, const QVariant &value);
 
 private:
   flat::Point2 mPoint;
+  QPointF mInitialPos;
+  double mCellSize;
   GraphicsLineItem *mInputLine, *mOutputLine;
 
 };

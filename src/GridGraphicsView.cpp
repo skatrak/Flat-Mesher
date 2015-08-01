@@ -1,6 +1,8 @@
 #include "GridGraphicsView.h"
 
 #include "Configuration.h"
+#include "GraphicsLineItem.h"
+#include "GraphicsPointItem.h"
 
 #include <QMouseEvent>
 #include <QWheelEvent>
@@ -20,8 +22,15 @@ void GridGraphicsView::setCellsSize(double size) {
     mCellsSize = size;
 
     resetCachedContent();
-    if (QGraphicsScene *scn = scene())
+    if (QGraphicsScene *scn = scene()) {
       scn->update();
+      for (QGraphicsItem *item: scn->items()) {
+        if (GraphicsPointItem *point = dynamic_cast<GraphicsPointItem*>(item))
+          point->cellSizeChanged(mCellsSize);
+        else if (GraphicsLineItem *line = dynamic_cast<GraphicsLineItem*>(item))
+          line->cellSizeChanged(mCellsSize);
+      }
+    }
   }
 }
 
@@ -37,7 +46,7 @@ void GridGraphicsView::setGridVisible(bool visible) {
 
 void GridGraphicsView::drawBackground(QPainter *painter, const QRectF &rect) {
   if (mGridVisible) {
-    painter->setPen(QPen(Qt::black, 0, Qt::DotLine));
+    painter->setPen(QPen(QColor(128, 128, 128, 64), 0));
 
     double left = std::ceil(rect.left() / mCellsSize) * mCellsSize;
     double top = std::ceil(rect.top() / mCellsSize) * mCellsSize;
@@ -71,4 +80,14 @@ void GridGraphicsView::wheelEvent(QWheelEvent* event) {
 void GridGraphicsView::mouseMoveEvent(QMouseEvent *event) {
   QGraphicsView::mouseMoveEvent(event);
   emit mouseMoved(event->pos());
+}
+
+void GridGraphicsView::mousePressEvent(QMouseEvent *event) {
+  QGraphicsView::mousePressEvent(event);
+  emit mousePressed(event->pos());
+}
+
+void GridGraphicsView::mouseReleaseEvent(QMouseEvent *event) {
+  QGraphicsView::mouseReleaseEvent(event);
+  emit mouseReleased(event->pos());
 }

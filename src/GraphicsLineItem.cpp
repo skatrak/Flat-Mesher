@@ -1,5 +1,6 @@
 #include "GraphicsLineItem.h"
 
+#include "Configuration.h"
 #include "GraphicsPointItem.h"
 #include "MeshEditor.h"
 
@@ -14,13 +15,10 @@ GraphicsLineItem::GraphicsLineItem(GraphicsPointItem *src, GraphicsPointItem *de
   setDest(dest);
 
   setFlag(QGraphicsItem::ItemIsSelectable);
-  setBoundingRegionGranularity(1.0);
   setAcceptHoverEvents(true);
   setZValue(-1.0);
 
-  QPen pen(Qt::black, 5);
-  pen.setCosmetic(true);
-  setPen(pen);
+  cellSizeChanged(config::DEFAULT_TRIANGLE_SZ);
 }
 
 GraphicsLineItem::~GraphicsLineItem() {
@@ -75,4 +73,9 @@ QPair<GraphicsPointItem*, GraphicsLineItem*> GraphicsLineItem::splitLine() {
   }
 
   return {nullptr, nullptr};
+}
+
+void GraphicsLineItem::cellSizeChanged(double cellSize) {
+  QPen pen(Qt::black, cellSize / 8);
+  setPen(pen);
 }
