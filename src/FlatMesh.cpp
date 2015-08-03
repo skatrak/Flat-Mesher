@@ -103,6 +103,8 @@ Mesh FlatMesh::createCeiling(const Rectangle& box, std::vector<size_t>& boundary
   Mesh ceiling;
 
   double delta = m_plan->getTriangleSize();
+
+  Point2 rectOffset = box.getLowerLeft();
   size_t height = (size_t) (box.getHeight() / delta);
   size_t width = (size_t) (box.getWidth() / delta);
 
@@ -113,7 +115,7 @@ Mesh FlatMesh::createCeiling(const Rectangle& box, std::vector<size_t>& boundary
 
   // Fill the first row and create the first nodes, saving its indices
   for (size_t ix = 0; ix <= width; ++ix) {
-    Point2 p(ix * delta, 0.0);
+    Point2 p(rectOffset.getX() + (ix * delta), rectOffset.getY());
 
     bool boundary = m_plan->pointInBoundary(p);
     bool inside = boundary || m_plan->pointInside(p);
@@ -126,13 +128,13 @@ Mesh FlatMesh::createCeiling(const Rectangle& box, std::vector<size_t>& boundary
   }
 
   // We iterate through the bounding box analyzing each group of 4 points
-  // in order to create the triangular mesh. The middle point is used to detect
-  // diagonal walls.
+  // in order to create the triangular mesh. The middle point is used to know
+  // if the square belongs to the ceiling.
   // d --- c
   // |  m  |
   // a --- b
   for (size_t iy = 1; iy <= height; ++iy) {
-    double y = iy * delta;
+    double y = rectOffset.getY() + (iy * delta);
 
     std::vector<size_t> current_row_idx(width + 1, std::numeric_limits<size_t>::max());
 
@@ -144,9 +146,9 @@ Mesh FlatMesh::createCeiling(const Rectangle& box, std::vector<size_t>& boundary
     size_t d_idx = std::numeric_limits<size_t>::max();
 
     // Coordinates of the points we will create
-    Point2 c(delta, y);
-    Point2 d(0, y);
-    Point2 m(delta / 2.0, y - (delta / 2.0));
+    Point2 c(rectOffset.getX() + delta, y);
+    Point2 d(rectOffset.getX(), y);
+    Point2 m(rectOffset.getX() + (delta / 2.0), y - (delta / 2.0));
 
     // Check if the two new points are part of the boundary
     bool c_bo = m_plan->pointInBoundary(c);
@@ -187,7 +189,7 @@ Mesh FlatMesh::createCeiling(const Rectangle& box, std::vector<size_t>& boundary
     // Other than that, the computation is pretty much the same that the
     // first iteration
     for (size_t ix = 2; ix <= width; ++ix) {
-      double x = ix * delta;
+      double x = rectOffset.getX() + (ix * delta);
 
       a_idx = b_idx;
       d_idx = c_idx;
