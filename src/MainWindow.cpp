@@ -40,31 +40,35 @@ void MainWindow::newFlat() {
 }
 
 void MainWindow::openFlat() {
-  flat::FloorPlan plan;
-  QString fileName = FileManager::openFlat(plan);
+  QList<QPair<QString, flat::FloorPlan>> flats = FileManager::openFlats();
 
-  if (!fileName.isNull()) {
-    // If it is loaded, only swap the current tab
-    int tabIndex = findOpenFile(fileName);
-    if (tabIndex >= 0) {
-      // Ask if user wants to replace unsaved data
-      ui->planSet->setCurrentIndex(tabIndex);
-      if (!mCurrentEditor->isSaved()) {
-        int response = QMessageBox::question(this, tr("Replace changes"),
-                                             tr("The current model has unsaved changes. Do you want to reload the model? All changes will be lost"),
-                                             QMessageBox::Yes | QMessageBox::No,
-                                             QMessageBox::No);
-        if (response == QMessageBox::Yes)
-          mCurrentEditor->loadPlan(plan);
+  for (QPair<QString, flat::FloorPlan> pair: flats) {
+    QString fileName = pair.first;
+    flat::FloorPlan plan = pair.second;
+
+    if (!fileName.isNull()) {
+      // If it is loaded, only swap the current tab
+      int tabIndex = findOpenFile(fileName);
+      if (tabIndex >= 0) {
+        // Ask if user wants to replace unsaved data
+        ui->planSet->setCurrentIndex(tabIndex);
+        if (!mCurrentEditor->isSaved()) {
+          int response = QMessageBox::question(this, tr("Replace changes"),
+                                               tr("The current model has unsaved changes. Do you want to reload the model? All changes will be lost"),
+                                               QMessageBox::Yes | QMessageBox::No,
+                                               QMessageBox::No);
+          if (response == QMessageBox::Yes)
+            mCurrentEditor->loadPlan(plan);
+        }
       }
-    }
-    else {
-      MeshEditor *editor = new MeshEditor();
-      configureAndSelectEditor(editor, fileName.section('/', -1));
+      else {
+        MeshEditor *editor = new MeshEditor();
+        configureAndSelectEditor(editor, fileName.section('/', -1));
 
-      editor->setFileName(fileName);
-      editor->loadPlan(plan);
-      editor->adjustViewport();
+        editor->setFileName(fileName);
+        editor->loadPlan(plan);
+        editor->adjustViewport();
+      }
     }
   }
 }
@@ -214,6 +218,8 @@ void MainWindow::onSelectionChanged(SelectedItems selectionType) {
 
     mSelectionCollapsible->setContent(mSelectionLine);
     break;
+  default:
+    break;
   }
 }
 
@@ -256,6 +262,9 @@ void MainWindow::onTabChanged(int tabIndex) {
     mTriangleSz->setValue(mCurrentEditor->triangleSize());
     mWallsHeight->setValue(mCurrentEditor->wallsHeight());
     mViewport->setViewport(mCurrentEditor->viewport());
+    mViewport->setStepSize(mCurrentEditor->triangleSize());
+    mPointX->setSingleStep(mCurrentEditor->triangleSize());
+    mPointY->setSingleStep(mCurrentEditor->triangleSize());
 
     onSelectionChanged(mCurrentEditor->selectionType());
     onPointsAmountChanged(mCurrentEditor->pointCount());

@@ -9,14 +9,20 @@
 #include <FlatMesher/VTUMeshFormatter.h>
 #include <QFileDialog>
 
-QString FileManager::openFlat(flat::FloorPlan& plan) {
-  QString fileName = QFileDialog::getOpenFileName(nullptr, QObject::tr("Open flat"), QString(),
-                                                  QObject::tr("FlatMesher flat files (*.flat)"));
+QList<QPair<QString, flat::FloorPlan>> FileManager::openFlats() {
+  QStringList fileNames = QFileDialog::getOpenFileNames(nullptr,
+                                                        QObject::tr("Open flat"),
+                                                        QString(),
+                                                        QObject::tr("FlatMesher flat files (*.flat)"));
 
-  if (fileName.isNull() || !openFlat(fileName, plan))
-    return QString();
-  else
-    return fileName;
+  QList<QPair<QString, flat::FloorPlan>> result;
+  for (QString fileName: fileNames) {
+    flat::FloorPlan plan;
+    if (!fileName.isNull() && openFlat(fileName, plan))
+      result << QPair<QString, flat::FloorPlan>(fileName, plan);
+  }
+
+  return result;
 }
 
 bool FileManager::openFlat(const QString& fileName, flat::FloorPlan& plan) {

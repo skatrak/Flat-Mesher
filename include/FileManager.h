@@ -2,6 +2,8 @@
 #define FILEMANAGER_H
 
 #include <QObject>
+#include <QList>
+#include <QPair>
 #include <QString>
 
 namespace flat {
@@ -12,7 +14,7 @@ class MeshFormatter;
 
 class FileManager {
 public:
-  static QString openFlat(flat::FloorPlan& plan);
+  static QList<QPair<QString, flat::FloorPlan>> openFlats();
   static bool openFlat(const QString& fileName, flat::FloorPlan& plan);
 
   static QString saveFlat(const flat::FloorPlan &plan);
