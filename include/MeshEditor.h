@@ -104,6 +104,8 @@ protected:
   void splitLine(GraphicsLineItem *line);
 
 private:
+  void setPointsAmount(int amount);
+
   QString mFileName;
   double mTriangleSize, mWallsHeight;
 

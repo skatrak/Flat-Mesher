@@ -64,6 +64,8 @@ protected slots:
   void onSavedChanged(bool saved);
 
 protected:
+  virtual void closeEvent(QCloseEvent *event);
+
   int findOpenFile(const QString& fileName) const;
   void configureAndSelectEditor(MeshEditor *editor, const QString& tabName);
 
@@ -81,6 +83,7 @@ private slots:
 
 private:
   bool saveEditorModel(int tabIndex);
+  bool closeEditorModel(int tabIndex);
   void resetInputsToDefault();
   void editorAvailable(bool available);
   void setupActions();

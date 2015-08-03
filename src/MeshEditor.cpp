@@ -169,12 +169,11 @@ void MeshEditor::setFileName(const QString& fileName) {
 }
 
 void MeshEditor::setTrianglesSize(double triangleSize) {
-  mTriangleSize = triangleSize;
-  mView->setCellsSize(mTriangleSize);
+  mUndoStack->push(new ChangeTriangleSizeCommand(this, triangleSize));
 }
 
 void MeshEditor::setWallsHeight(double wallsHeight) {
-  mWallsHeight = wallsHeight;
+  mUndoStack->push(new ChangeWallsHeightCommand(this, wallsHeight));
 }
 
 void MeshEditor::loadPlan(const flat::FloorPlan& plan) {
@@ -201,6 +200,7 @@ void MeshEditor::setSelectionMode(SelectionMode mode) {
   if (mode != mCurrentMode) {
     switch (mode) {
     case SelectionMode::Selection:
+      setCursor(Qt::ArrowCursor);
       mView->setDragMode(QGraphicsView::RubberBandDrag);
       mView->setInteractive(true);
       break;
@@ -209,6 +209,7 @@ void MeshEditor::setSelectionMode(SelectionMode mode) {
       mView->setInteractive(false);
       break;
     case SelectionMode::AddPoints:
+      setCursor(Qt::CrossCursor);
       mView->setDragMode(QGraphicsView::NoDrag);
       mView->setInteractive(true);
       break;
@@ -224,7 +225,6 @@ void MeshEditor::changeSelectedPoint(const flat::Point2& point) {
 
 void MeshEditor::deleteSelectedPoints() {
   mUndoStack->push(new DeletePointsCommand(this, selectedPointItems()));
-  emit pointsAmountChanged(pointCount());
 }
 
 void MeshEditor::splitSelectedLine() {
@@ -273,7 +273,7 @@ void MeshEditor::onMouseMoved(const QPoint& pos) {
   emit cursorMoved(mapToFlat(mView->mapToScene(pos)));
 }
 
-void MeshEditor::onMousePressed(const QPoint& pos) {
+void MeshEditor::onMousePressed(const QPoint& /*pos*/) {
   mMousePressed = true;
 }
 
@@ -318,6 +318,7 @@ void MeshEditor::setPlan(const flat::FloorPlan& plan) {
 
   if (points.size() > 2) {
     GraphicsPointItem *prevPoint = new GraphicsPointItem(points[0]);
+    prevPoint->cellSizeChanged(mTriangleSize);
     mScene->addItem(prevPoint);
     mFirstPoint = prevPoint;
 
@@ -326,6 +327,9 @@ void MeshEditor::setPlan(const flat::FloorPlan& plan) {
     for (unsigned i = 1; i < points.size(); ++i) {
       GraphicsPointItem *actPoint = new GraphicsPointItem(points[i]);
       GraphicsLineItem *line = new GraphicsLineItem(prevPoint, actPoint);
+
+      actPoint->cellSizeChanged(mTriangleSize);
+      line->cellSizeChanged(mTriangleSize);
 
       mScene->addItem(line);
       mScene->addItem(actPoint);
@@ -338,6 +342,7 @@ void MeshEditor::setPlan(const flat::FloorPlan& plan) {
     }
 
     GraphicsLineItem *line = new GraphicsLineItem(prevPoint, mFirstPoint);
+    line->cellSizeChanged(mTriangleSize);
     mScene->addItem(line);
 
     prevPoint->setOutputLine(line);
@@ -417,12 +422,10 @@ GraphicsLineItem* MeshEditor::selectedLineItem() {
 
 void MeshEditor::appendPoint(const flat::Point2& point) {
   mUndoStack->push(new AppendPointCommand(this, point));
-  emit pointsAmountChanged(pointCount());
 }
 
 void MeshEditor::deletePoint(GraphicsPointItem *point) {
   mUndoStack->push(new DeletePointsCommand(this, {point}));
-  emit pointsAmountChanged(pointCount());
 }
 
 void MeshEditor::movePoint(GraphicsPointItem *point, const flat::Point2& pos) {
@@ -435,5 +438,11 @@ void MeshEditor::movePoint(GraphicsPointItem *point, const flat::Point2& pos) {
 
 void MeshEditor::splitLine(GraphicsLineItem *line) {
   mUndoStack->push(new SplitLineCommand(this, line));
-  emit pointsAmountChanged(pointCount());
+}
+
+void MeshEditor::setPointsAmount(int amount) {
+  if (mPointsAmount != amount) {
+    mPointsAmount = amount;
+    emit pointsAmountChanged(mPointsAmount);
+  }
 }

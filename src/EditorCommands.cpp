@@ -76,7 +76,7 @@ GraphicsPointItem* MeshEditorCommand::addPoint(const flat::Point2& point,
     }
   }
 
-  ++mEditor->mPointsAmount;
+  mEditor->setPointsAmount(mEditor->mPointsAmount + 1);
   return newPoint;
 }
 
@@ -95,7 +95,7 @@ void MeshEditorCommand::deletePoint(GraphicsPointItem *point) {
       point->inputLine()->src()->setHighlighted(true);
 
     delete point;
-    --mEditor->mPointsAmount;
+    mEditor->setPointsAmount(mEditor->mPointsAmount - 1);
   }
 }
 
@@ -129,7 +129,7 @@ QPair<GraphicsPointItem*, GraphicsLineItem*> MeshEditorCommand::splitLine(Graphi
     mEditor->mScene->addItem(newLine);
     mEditor->mScene->addItem(point);
 
-    ++mEditor->mPointsAmount;
+    mEditor->setPointsAmount(mEditor->mPointsAmount + 1);
     return pair;
   }
 

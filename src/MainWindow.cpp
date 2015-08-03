@@ -6,12 +6,14 @@
 #include "FileManager.h"
 #include "MeshAnalyzer.h"
 #include "MeshEditor.h"
+#include "MessageManager.h"
 #include "ViewportControls.h"
 
 #include <FlatMesher/FlatMesh.h>
 #include <FlatMesher/FloorPlan.h>
 
 #include <QActionGroup>
+#include <QCloseEvent>
 #include <QDoubleSpinBox>
 #include <QGridLayout>
 #include <QLabel>
@@ -54,22 +56,12 @@ void MainWindow::openFlat() {
       if (tabIndex >= 0) {
         // Ask if user wants to replace unsaved data
         ui->planSet->setCurrentIndex(tabIndex);
-        if (!mCurrentEditor->isSaved()) {
-          int response = QMessageBox::question(this, tr("Replace changes"),
-                                               tr("The current model has unsaved changes. Do you want to reload the model? All changes will be lost"),
-                                               QMessageBox::Yes | QMessageBox::No,
-                                               QMessageBox::No);
-          if (response == QMessageBox::Yes)
-            mCurrentEditor->loadPlan(plan);
-        }
+        if (!mCurrentEditor->isSaved() && MessageManager::fileReload(this, fileName))
+          mCurrentEditor->loadPlan(plan);
       }
       else {
-        MeshEditor *editor = new MeshEditor();
-        editor->setFileName(fileName);
-
+        MeshEditor *editor = new MeshEditor(fileName, plan);
         configureAndSelectEditor(editor, fileName.section('/', -1));
-
-        editor->loadPlan(plan);
         editor->adjustViewport();
       }
     }
@@ -77,31 +69,23 @@ void MainWindow::openFlat() {
 }
 
 void MainWindow::closeFlat() {
-  if (ui->planSet->count() > 0) {
-    if (!mCurrentEditor->isSaved()) {
-      int response = QMessageBox::question(this, tr("Save changes"),
-                                           tr("The current model has unsaved changes. Do you want to save it?"),
-                                           QMessageBox::Save | QMessageBox::Discard | QMessageBox::Cancel,
-                                           QMessageBox::Save);
-      switch (response) {
-      case QMessageBox::Cancel:
-        return;
-      case QMessageBox::Save:
-        FileManager::saveFlat(mCurrentEditor->plan(), mCurrentEditor->fileName());
-      }
-    }
-
-    ui->planSet->removeTab(ui->planSet->currentIndex());
-  }
+  closeEditorModel(ui->planSet->currentIndex());
 }
 
 void MainWindow::closeAllFlats() {
-  while (ui->planSet->count() > 0)
-    closeFlat();
+  for (int i = 0; i < ui->planSet->count();) {
+    if (!closeEditorModel(i))
+      ++i;
+  }
 }
 
 void MainWindow::saveFlat() {
-  saveEditorModel(ui->planSet->currentIndex());
+  if (mCurrentEditor != nullptr) {
+    if (mCurrentEditor->fileName().isNull())
+      saveFlatAs();
+    else
+      saveEditorModel(ui->planSet->currentIndex());
+  }
 }
 
 void MainWindow::saveFlatAs() {
@@ -123,8 +107,12 @@ void MainWindow::saveAllFlats() {
 }
 
 void MainWindow::exportMesh() {
-  if (mCurrentEditor != nullptr)
-    FileManager::saveMesh(mCurrentEditor->mesh());
+  if (mCurrentEditor != nullptr) {
+    if (!mCurrentEditor->plan().valid())
+      MessageManager::invalidMeshExport(this);
+    else
+      FileManager::saveMesh(mCurrentEditor->mesh());
+  }
 }
 
 void MainWindow::selectAll() {
@@ -135,7 +123,6 @@ void MainWindow::selectAll() {
 void MainWindow::toolChanged(QAction *toolAction) {
   bool selection = false;
   SelectionMode prevMode = mCurrentMode;
-  Qt::CursorShape cursor = Qt::ArrowCursor;
 
   if (toolAction == mActionSelectionTool) {
     mCurrentMode = SelectionMode::Selection;
@@ -146,10 +133,8 @@ void MainWindow::toolChanged(QAction *toolAction) {
   }
   else if (toolAction == mActionAddTool) {
     mCurrentMode = SelectionMode::AddPoints;
-    cursor = Qt::CrossCursor;
   }
 
-  ui->planSet->setCursor(cursor);
   mSelectionCollapsible->setVisible(selection);
 
   if (prevMode != mCurrentMode && mCurrentEditor != nullptr)
@@ -170,9 +155,7 @@ void MainWindow::invertPoints() {
 }
 
 void MainWindow::about() {
-  QMessageBox::about(this, tr("About"),
-                     tr("<b>FlatMesher</b><tr/>"
-                        "Version %1. Copyright Sergio M. Afonso Fumero 2015").arg(config::VERSION_STRING));
+  MessageManager::aboutApplication(this);
 }
 
 void MainWindow::onCursorMoved(const flat::Point2& pos) {
@@ -237,6 +220,15 @@ void MainWindow::onSavedChanged(bool saved) {
 
     ui->planSet->setTabText(ui->planSet->currentIndex(), tabTitle);
   }
+}
+
+void MainWindow::closeEvent(QCloseEvent *event) {
+  closeAllFlats();
+
+  if (ui->planSet->currentIndex() < 0)
+    event->accept();
+  else
+    event->ignore();
 }
 
 int MainWindow::findOpenFile(const QString& fileName) const {
@@ -363,7 +355,10 @@ bool MainWindow::saveEditorModel(int tabIndex) {
       QString fileName;
       if (!editor->fileName().isNull()) {
         fileName = editor->fileName();
-        FileManager::saveFlat(plan, fileName);
+        if (!FileManager::saveFlat(plan, fileName)) {
+          MessageManager::fileSaveFailed(this, fileName);
+          return false;
+        }
       }
       else
         fileName = FileManager::saveFlat(plan);
@@ -374,7 +369,31 @@ bool MainWindow::saveEditorModel(int tabIndex) {
       }
     }
 
-    // TODO Check the actual error code from the filemanager
+    return true;
+  }
+
+  return false;
+}
+
+bool MainWindow::closeEditorModel(int tabIndex) {
+  if (tabIndex >= 0 && tabIndex < ui->planSet->count()) {
+    MeshEditor *editor = dynamic_cast<MeshEditor*>(ui->planSet->widget(tabIndex));
+    QString title = ui->planSet->tabText(tabIndex);
+    title = title.left(title.length() - 1);
+
+    if (!editor->isSaved()) {
+      switch (MessageManager::fileUnsavedChanges(this, editor->fileName())) {
+      case QMessageBox::Cancel:
+        return false;
+      case QMessageBox::Save:
+        if (!FileManager::saveFlat(editor->plan(), editor->fileName())) {
+          MessageManager::fileSaveFailed(this, editor->fileName());
+          return false;
+        }
+      }
+    }
+
+    ui->planSet->removeTab(ui->planSet->currentIndex());
     return true;
   }
 
