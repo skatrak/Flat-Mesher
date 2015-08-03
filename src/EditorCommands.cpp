@@ -30,6 +30,7 @@ GraphicsPointItem* MeshEditorCommand::addPoint(const flat::Point2& point,
   if (!mEditor->mFirstPoint) {
     mEditor->mFirstPoint = newPoint = new GraphicsPointItem(point);
     newPoint->cellSizeChanged(mEditor->mTriangleSize);
+    newPoint->setHighlight(HighlightMode::First);
     mEditor->mScene->addItem(mEditor->mFirstPoint);
   }
   else {
@@ -47,8 +48,8 @@ GraphicsPointItem* MeshEditorCommand::addPoint(const flat::Point2& point,
       newPoint->setOutputLine(l2);
       newPoint->setInputLine(l1);
 
-      mEditor->mFirstPoint->setHighlighted(false);
-      newPoint->setHighlighted(true);
+      //mEditor->mFirstPoint->setHighlighted(false);
+      newPoint->setHighlight(HighlightMode::Last);
 
       mEditor->mScene->addItem(newPoint);
       mEditor->mScene->addItem(l1);
@@ -59,7 +60,7 @@ GraphicsPointItem* MeshEditorCommand::addPoint(const flat::Point2& point,
                                       mEditor->mFirstPoint->inputLine();
 
       if (iLine->dest() == mEditor->mFirstPoint)
-        iLine->src()->setHighlighted(false);
+        iLine->src()->setHighlight(HighlightMode::None);
 
       QPair<GraphicsPointItem*, GraphicsLineItem*> pair = iLine->splitLine();
       mEditor->mScene->addItem(pair.first);
@@ -68,7 +69,7 @@ GraphicsPointItem* MeshEditorCommand::addPoint(const flat::Point2& point,
       newPoint = pair.first;
 
       if (newPoint->outputLine()->dest() == mEditor->mFirstPoint)
-        newPoint->setHighlighted(true);
+        newPoint->setHighlight(HighlightMode::Last);
 
       newPoint->setFlatPoint(point);
       newPoint->cellSizeChanged(mEditor->mTriangleSize);
@@ -83,8 +84,10 @@ GraphicsPointItem* MeshEditorCommand::addPoint(const flat::Point2& point,
 void MeshEditorCommand::deletePoint(GraphicsPointItem *point) {
   if (point != nullptr) {
     if (point == mEditor->mFirstPoint) {
-      if (point->outputLine())
+      if (point->outputLine()) {
         mEditor->mFirstPoint = point->outputLine()->dest();
+        mEditor->mFirstPoint->setHighlight(HighlightMode::First);
+      }
       else
         mEditor->mFirstPoint = nullptr;
     }
@@ -92,7 +95,7 @@ void MeshEditorCommand::deletePoint(GraphicsPointItem *point) {
              point->outputLine()->dest() == mEditor->mFirstPoint &&
              point->inputLine() &&
              point->inputLine()->src())
-      point->inputLine()->src()->setHighlighted(true);
+      point->inputLine()->src()->setHighlight(HighlightMode::Last);
 
     delete point;
     mEditor->setPointsAmount(mEditor->mPointsAmount - 1);
@@ -122,8 +125,8 @@ QPair<GraphicsPointItem*, GraphicsLineItem*> MeshEditorCommand::splitLine(Graphi
     newLine->cellSizeChanged(mEditor->mTriangleSize);
 
     if (point->outputLine()->dest() == mEditor->mFirstPoint) {
-      point->setHighlighted(true);
-      point->inputLine()->src()->setHighlighted(false);
+      point->setHighlight(HighlightMode::Last);
+      point->inputLine()->src()->setHighlight(HighlightMode::None);
     }
 
     mEditor->mScene->addItem(newLine);
@@ -150,8 +153,8 @@ void MeshEditorCommand::invertPointsOrder() {
     } while (point && point != mEditor->mFirstPoint);
 
     if (mEditor->mFirstPoint->outputLine() && mEditor->mFirstPoint->inputLine()) {
-      mEditor->mFirstPoint->outputLine()->dest()->setHighlighted(false);
-      mEditor->mFirstPoint->inputLine()->src()->setHighlighted(true);
+      mEditor->mFirstPoint->outputLine()->dest()->setHighlight(HighlightMode::None);
+      mEditor->mFirstPoint->inputLine()->src()->setHighlight(HighlightMode::Last);
     }
   }
 }

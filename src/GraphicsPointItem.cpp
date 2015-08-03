@@ -16,27 +16,30 @@ GraphicsPointItem::GraphicsPointItem(const flat::Point2& pos, QGraphicsItem *par
   setAcceptHoverEvents(true);
 
   cellSizeChanged(config::DEFAULT_TRIANGLE_SZ);
-  setHighlighted(false);
+  setHighlight(HighlightMode::None);
 }
 
 GraphicsPointItem::~GraphicsPointItem() {
-  if (mInputLine && mOutputLine) {
-    // Delete mOutputLine and redirect mInputLine to the second point
-    // mOutputLine is connected
-    GraphicsPointItem *next = mOutputLine->dest();
-    delete mOutputLine;
+  QPair<GraphicsLineItem*, GraphicsLineItem*> lines = detach();
+  GraphicsLineItem *in = lines.first, *out = lines.second;
 
-    if (next) {
-      if (next->outputLine() != mInputLine)
-        next->setInputLine(mInputLine);
-      else {
-        delete mInputLine;
-        return;
-      }
-    }
+  if (in && !in->src() && !in->dest())
+    delete in;
 
-    mInputLine->setDest(next);
-  }
+  if (out && !out->src() && !out->dest())
+    delete out;
+}
+
+bool GraphicsPointItem::isDetached() const {
+  return !mInputLine && !mOutputLine;
+}
+
+GraphicsPointItem* GraphicsPointItem::nextPoint() {
+  return mOutputLine? mOutputLine->dest() : nullptr;
+}
+
+GraphicsPointItem* GraphicsPointItem::prevPoint() {
+  return mInputLine? mInputLine->src() : nullptr;
 }
 
 void GraphicsPointItem::setFlatPoint(const flat::Point2& point) {
@@ -57,14 +60,48 @@ void GraphicsPointItem::setOutputLine(GraphicsLineItem *line) {
   mOutputLine = line;
 }
 
-void GraphicsPointItem::setHighlighted(bool highlighted) {
-  setBrush(QBrush(highlighted? Qt::red : Qt::blue));
+void GraphicsPointItem::setHighlight(HighlightMode highlight) {
+  switch (highlight) {
+  case HighlightMode::None:
+    setBrush(QBrush(Qt::blue));
+    break;
+  case HighlightMode::First:
+    setBrush(QBrush(Qt::green));
+    break;
+  case HighlightMode::Last:
+    setBrush(QBrush(Qt::red));
+    break;
+  }
 }
 
 void GraphicsPointItem::invertConnection() {
   GraphicsLineItem *tmp = mInputLine;
   mInputLine = mOutputLine;
   mOutputLine = tmp;
+}
+
+QPair<GraphicsLineItem*, GraphicsLineItem*> GraphicsPointItem::detach() {
+  GraphicsLineItem *inL = mInputLine, *outL = mOutputLine;
+  GraphicsPointItem *inP = prevPoint(), *outP = nextPoint();
+
+  if (inP && outP) {
+    outL->setSrc(nullptr);
+    outL->setDest(nullptr);
+
+    if (inP == outP) {
+      inL->setSrc(nullptr);
+      inL->setDest(nullptr);
+
+      inP->mOutputLine = inP->mOutputLine = nullptr;
+    }
+    else {
+      outP->setInputLine(inL);
+      inL->setDest(outP);
+    }
+  }
+
+  mInputLine = mOutputLine = nullptr;
+  return {inL, outL};
 }
 
 void GraphicsPointItem::cellSizeChanged(double cellSize) {

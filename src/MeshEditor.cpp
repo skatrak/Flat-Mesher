@@ -348,7 +348,8 @@ void MeshEditor::setPlan(const flat::FloorPlan& plan) {
     prevPoint->setOutputLine(line);
     mFirstPoint->setInputLine(line);
 
-    prevPoint->setHighlighted(true);
+    prevPoint->setHighlight(HighlightMode::Last);
+    mFirstPoint->setHighlight(HighlightMode::First);
   }
 
   emit pointsAmountChanged(pointCount());
