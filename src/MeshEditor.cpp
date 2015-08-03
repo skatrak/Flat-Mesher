@@ -1,6 +1,7 @@
 #include "MeshEditor.h"
 
 #include "Configuration.h"
+#include "EditorCommands.h"
 #include "GraphicsLineItem.h"
 #include "GraphicsPointItem.h"
 #include "GridGraphicsView.h"
@@ -17,7 +18,7 @@
 
 MeshEditor::MeshEditor(QWidget *parent): QWidget(parent),
     mTriangleSize(config::DEFAULT_TRIANGLE_SZ), mWallsHeight(config::DEFAULT_WALLS_HEIGHT),
-    mFirstPoint(nullptr), mPointsAmount(0), mMousePressed(false) {
+    mFirstPoint(nullptr), mPointsAmount(0), mMousePressed(false), mMouseMoved(false) {
   mUndoStack = new QUndoStack(this);
   mCurrentMode = SelectionMode::Selection;
 
@@ -217,6 +218,19 @@ void MeshEditor::setSelectionMode(SelectionMode mode) {
   }
 }
 
+void MeshEditor::changeSelectedPoint(const flat::Point2& point) {
+  movePoint(selectedPointItem(), point);
+}
+
+void MeshEditor::deleteSelectedPoints() {
+  mUndoStack->push(new DeletePointsCommand(this, selectedPointItems()));
+  emit pointsAmountChanged(pointCount());
+}
+
+void MeshEditor::splitSelectedLine() {
+  splitLine(selectedLineItem());
+}
+
 void MeshEditor::selectAllPoints() {
   GraphicsPointItem* point = mFirstPoint;
   if (point) {
@@ -232,150 +246,15 @@ void MeshEditor::selectAllPoints() {
 }
 
 void MeshEditor::invertPointsOrder() {
-  GraphicsPointItem* point = mFirstPoint;
-  if (point) {
-    do {
-      if (!point->outputLine())
-        break;
-
-      GraphicsPointItem* next = point->outputLine()->dest();
-      point->outputLine()->invertConnection();
-      point->invertConnection();
-      point = next;
-    } while (point && point != mFirstPoint);
-
-    if (mFirstPoint->outputLine() && mFirstPoint->inputLine()) {
-      mFirstPoint->outputLine()->dest()->setHighlighted(false);
-      mFirstPoint->inputLine()->src()->setHighlighted(true);
-    }
-  }
-}
-
-void MeshEditor::addPoint(const flat::Point2& point) {
-  if (!mFirstPoint) {
-    mFirstPoint = new GraphicsPointItem(point);
-    mFirstPoint->cellSizeChanged(mTriangleSize);
-    mScene->addItem(mFirstPoint);
-  }
-  else {
-    if (pointCount() == 1) {
-      GraphicsPointItem *newPoint = new GraphicsPointItem(point);
-      newPoint->cellSizeChanged(mTriangleSize);
-
-      GraphicsLineItem *l1 = new GraphicsLineItem(mFirstPoint, newPoint);
-      GraphicsLineItem *l2 = new GraphicsLineItem(newPoint, mFirstPoint);
-      l1->cellSizeChanged(mTriangleSize);
-      l2->cellSizeChanged(mTriangleSize);
-
-      mFirstPoint->setOutputLine(l1);
-      mFirstPoint->setInputLine(l2);
-      newPoint->setOutputLine(l2);
-      newPoint->setInputLine(l1);
-
-      mFirstPoint->setHighlighted(false);
-      newPoint->setHighlighted(true);
-
-      mScene->addItem(newPoint);
-      mScene->addItem(l1);
-      mScene->addItem(l2);
-    }
-    else {
-      GraphicsLineItem *iLine = mFirstPoint->inputLine();
-      iLine->src()->setHighlighted(false);
-
-      QPair<GraphicsPointItem*, GraphicsLineItem*> pair = iLine->splitLine();
-      mScene->addItem(pair.first);
-      mScene->addItem(pair.second);
-
-      pair.first->setHighlighted(true);
-      pair.first->setFlatPoint(point);
-      pair.first->cellSizeChanged(mTriangleSize);
-      pair.second->cellSizeChanged(mTriangleSize);
-    }
-  }
-
-  emit pointsAmountChanged(++mPointsAmount);
-}
-
-void MeshEditor::changeSelectedPoint(const flat::Point2& point) {
-  GraphicsPointItem *pointItem = selectedPointItem();
-  if (pointItem)
-    pointItem->setFlatPoint(point);
-}
-
-void MeshEditor::deleteSelectedPoints() {
-  QList<GraphicsPointItem*> points = selectedPointItems();
-  for (GraphicsPointItem *point: points) {
-    if (point == mFirstPoint) {
-      if (point->outputLine())
-        mFirstPoint = point->outputLine()->dest();
-      else
-        mFirstPoint = nullptr;
-    }
-    else if (point->outputLine() &&
-             point->outputLine()->dest() == mFirstPoint &&
-             point->inputLine() &&
-             point->inputLine()->src())
-        point->inputLine()->src()->setHighlighted(true);
-
-    delete point;
-  }
-
-  mPointsAmount -= points.size();
-  emit pointsAmountChanged(pointCount());
-}
-
-void MeshEditor::splitSelectedLine() {
-  GraphicsLineItem *line = selectedLineItem();
-  if (line) {
-    QPair<GraphicsPointItem*, GraphicsLineItem*> pair = line->splitLine();
-    GraphicsPointItem *point = pair.first;
-    GraphicsLineItem *newLine = pair.second;
-
-    point->cellSizeChanged(mTriangleSize);
-    newLine->cellSizeChanged(mTriangleSize);
-
-    if (point->outputLine()->dest() == mFirstPoint) {
-      point->setHighlighted(true);
-      point->inputLine()->src()->setHighlighted(false);
-    }
-
-    mScene->addItem(newLine);
-    mScene->addItem(point);
-  }
-
-  emit pointsAmountChanged(++mPointsAmount);
-}
-
-void MeshEditor::onScrollBarMoved() {
-  emit viewportChanged(viewport());
+  mUndoStack->push(new InvertOrderCommand(this));
 }
 
 void MeshEditor::onSelectionChanged() {
   emit selectionChanged(selectionType());
 }
 
-void MeshEditor::setViewport(const QRectF& sceneRect) {
-  // FIXME The view is always centered, so the viewport is only correct when
-  // FIXME the scene doesn't fit in the view or it's just the right size.
-  // FIXME When the view is bigger than the scene displayed, it's centered.
-  QRectF viewRect = mView->mapToScene(mView->rect()).boundingRect();
-
-  double zoomX = viewRect.width() / (sceneRect.width() + mTriangleSize);
-  double zoomY = viewRect.height() / (sceneRect.height() + mTriangleSize);
-
-  mView->setResizeAnchor(QGraphicsView::AnchorViewCenter);
-  mView->centerOn(sceneRect.center());
-  mView->scale(zoomX, zoomY);
-
-  mView->update();
-
-  if (!flat::utils::areEqual(zoomX, 1.0) || !flat::utils::areEqual(zoomY, 1.0))
-    emit viewportChanged(mapToFlat(sceneRect));
-}
-
 void MeshEditor::onMouseMoved(const QPoint& pos) {
-  if (mMousePressed) {
+  if (mMousePressed && !mMouseMoved) {
     GraphicsPointItem* point = mFirstPoint;
     if (point) {
       do {
@@ -387,6 +266,8 @@ void MeshEditor::onMouseMoved(const QPoint& pos) {
         point = line->dest();
       } while (point && point != mFirstPoint);
     }
+
+    mMouseMoved = true;
   }
 
   emit cursorMoved(mapToFlat(mView->mapToScene(pos)));
@@ -397,15 +278,14 @@ void MeshEditor::onMousePressed(const QPoint& pos) {
 }
 
 void MeshEditor::onMouseReleased(const QPoint& pos) {
-  mMousePressed = false;
   GraphicsPointItem* point = mFirstPoint;
 
   switch (mCurrentMode) {
   case SelectionMode::AddPoints:
-    addPoint(mapToFlat(snapToGrid(mView->mapToScene(pos), mTriangleSize)));
+    appendPoint(mapToFlat(snapToGrid(mView->mapToScene(pos), mTriangleSize)));
     break;
   case SelectionMode::Selection:
-    if (point) {
+    if (point && mMouseMoved) {
       do {
         GraphicsLineItem* line = point->outputLine();
         if (!line)
@@ -419,9 +299,17 @@ void MeshEditor::onMouseReleased(const QPoint& pos) {
   default:
     break;
   }
+
+  mMousePressed = mMouseMoved = false;
+}
+
+void MeshEditor::onScrollBarMoved() {
+  emit viewportChanged(viewport());
 }
 
 void MeshEditor::setPlan(const flat::FloorPlan& plan) {
+  mUndoStack->clear();
+
   mTriangleSize = plan.getTriangleSize();
   mView->setCellsSize(mTriangleSize);
 
@@ -461,6 +349,25 @@ void MeshEditor::setPlan(const flat::FloorPlan& plan) {
   emit pointsAmountChanged(pointCount());
 }
 
+void MeshEditor::setViewport(const QRectF& sceneRect) {
+  // FIXME The view is always centered, so the viewport is only correct when
+  // FIXME the scene doesn't fit in the view or it's just the right size.
+  // FIXME When the view is bigger than the scene displayed, it's centered.
+  QRectF viewRect = mView->mapToScene(mView->rect()).boundingRect();
+
+  double zoomX = viewRect.width() / (sceneRect.width() + mTriangleSize);
+  double zoomY = viewRect.height() / (sceneRect.height() + mTriangleSize);
+
+  mView->setResizeAnchor(QGraphicsView::AnchorViewCenter);
+  mView->centerOn(sceneRect.center());
+  mView->scale(zoomX, zoomY);
+
+  mView->update();
+
+  if (!flat::utils::areEqual(zoomX, 1.0) || !flat::utils::areEqual(zoomY, 1.0))
+    emit viewportChanged(mapToFlat(sceneRect));
+}
+
 void MeshEditor::removePoints() {
   while (mPointsAmount > 0) {
     Q_ASSERT(mFirstPoint != nullptr);
@@ -477,7 +384,7 @@ void MeshEditor::removePoints() {
   mFirstPoint = nullptr;
   Q_ASSERT(mPointsAmount == 0);
 
-  emit pointsAmountChanged(0);
+  emit pointsAmountChanged(mPointsAmount);
 }
 
 GraphicsPointItem* MeshEditor::selectedPointItem() {
@@ -506,4 +413,27 @@ GraphicsLineItem* MeshEditor::selectedLineItem() {
     return nullptr;
 
   return dynamic_cast<GraphicsLineItem*>(selected.first());
+}
+
+void MeshEditor::appendPoint(const flat::Point2& point) {
+  mUndoStack->push(new AppendPointCommand(this, point));
+  emit pointsAmountChanged(pointCount());
+}
+
+void MeshEditor::deletePoint(GraphicsPointItem *point) {
+  mUndoStack->push(new DeletePointsCommand(this, {point}));
+  emit pointsAmountChanged(pointCount());
+}
+
+void MeshEditor::movePoint(GraphicsPointItem *point, const flat::Point2& pos) {
+  if (point) {
+    flat::Point2 lastPos = point->flatPoint();
+    point->setFlatPoint(pos);
+    mUndoStack->push(new MovePointsCommand(this, {point}, lastPos));
+  }
+}
+
+void MeshEditor::splitLine(GraphicsLineItem *line) {
+  mUndoStack->push(new SplitLineCommand(this, line));
+  emit pointsAmountChanged(pointCount());
 }

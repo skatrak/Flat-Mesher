@@ -22,7 +22,8 @@ SOURCES += src/Main.cpp\
     src/GridGraphicsView.cpp \
     src/GraphicsPointItem.cpp \
     src/GraphicsLineItem.cpp \
-    src/MeshAnalyzer.cpp
+    src/MeshAnalyzer.cpp \
+    src/EditorCommands.cpp
 
 HEADERS  += include/MainWindow.h \
     include/CollapsibleWidget.h \
@@ -35,7 +36,8 @@ HEADERS  += include/MainWindow.h \
     include/SelectedItems.h \
     include/GraphicsPointItem.h \
     include/GraphicsLineItem.h \
-    include/MeshAnalyzer.h
+    include/MeshAnalyzer.h \
+    include/EditorCommands.h
 
 QMAKE_CXXFLAGS += -fopenmp
 

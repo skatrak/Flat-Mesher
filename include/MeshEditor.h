@@ -1,7 +1,6 @@
 #ifndef MESHEDITOR_H
 #define MESHEDITOR_H
 
-#include <QSet>
 #include <QString>
 #include <QWidget>
 
@@ -23,6 +22,8 @@ class QUndoStack;
 
 class MeshEditor: public QWidget {
   Q_OBJECT
+
+  friend class MeshEditorCommand;
 
 public:
   explicit MeshEditor(QWidget *parent = 0);
@@ -68,12 +69,12 @@ public slots:
   void setGridVisible(bool visible);
   void setSelectionMode(SelectionMode mode);
 
-  void selectAllPoints();
-  void invertPointsOrder();
-  void addPoint(const flat::Point2& point);
   void changeSelectedPoint(const flat::Point2& point);
   void deleteSelectedPoints();
   void splitSelectedLine();
+
+  void selectAllPoints();
+  void invertPointsOrder();
 
 signals:
   void cursorMoved(const flat::Point2& point);
@@ -97,6 +98,11 @@ protected:
   QList<GraphicsPointItem*> selectedPointItems();
   GraphicsLineItem* selectedLineItem();
 
+  void appendPoint(const flat::Point2& point);
+  void deletePoint(GraphicsPointItem *point);
+  void movePoint(GraphicsPointItem *point, const flat::Point2& pos);
+  void splitLine(GraphicsLineItem *line);
+
 private:
   QString mFileName;
   double mTriangleSize, mWallsHeight;
@@ -110,7 +116,7 @@ private:
   QGraphicsScene *mScene;
   GridGraphicsView *mView;
 
-  bool mMousePressed;
+  bool mMousePressed, mMouseMoved;
 
 };
 
