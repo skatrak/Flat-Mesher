@@ -29,6 +29,8 @@ MainWindow::MainWindow(QWidget *parent): QMainWindow(parent), ui(new Ui::MainWin
   setupPropertiesSidebar();
   setupStatusBar();
   editorAvailable(false);
+
+  connect(mUndoGroup, SIGNAL(cleanChanged(bool)), this, SLOT(onSavedChanged(bool)));
 }
 
 MainWindow::~MainWindow() {
@@ -63,9 +65,10 @@ void MainWindow::openFlat() {
       }
       else {
         MeshEditor *editor = new MeshEditor();
+        editor->setFileName(fileName);
+
         configureAndSelectEditor(editor, fileName.section('/', -1));
 
-        editor->setFileName(fileName);
         editor->loadPlan(plan);
         editor->adjustViewport();
       }
@@ -220,6 +223,19 @@ void MainWindow::onSelectionChanged(SelectedItems selectionType) {
     break;
   default:
     break;
+  }
+}
+
+void MainWindow::onSavedChanged(bool saved) {
+  if (mCurrentEditor) {
+    QString tabTitle = mCurrentEditor->fileName().section('/', -1);
+    if (tabTitle.isNull())
+      tabTitle = tr("<unnamed>");
+
+    if (!saved)
+      tabTitle += '*';
+
+    ui->planSet->setTabText(ui->planSet->currentIndex(), tabTitle);
   }
 }
 

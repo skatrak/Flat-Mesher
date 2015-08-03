@@ -61,6 +61,7 @@ protected slots:
   void onViewportChanged(const flat::Rectangle& viewport);
   void onPointsAmountChanged(int amount);
   void onSelectionChanged(SelectedItems selectionType);
+  void onSavedChanged(bool saved);
 
 protected:
   int findOpenFile(const QString& fileName) const;
