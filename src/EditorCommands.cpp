@@ -6,6 +6,7 @@
 #include "GridGraphicsView.h"
 
 #include <QGraphicsScene>
+#include <QSet>
 
 // /////////////////////////////////////////////////////////////////////////////
 // MeshEditorCommand
@@ -225,9 +226,30 @@ void DeletePointsCommand::undo() {
   // We insert them in reverse order to always have the needed line connected
   // to the previous point, so it's possible to split it and insert this point
   // in the middle
-  // FIXME This fails when consecutive points are deleted
-  for (int i = mPoints.length() - 1; i >= 0; --i)
+
+  // FIXME This is quite weak and could fail easily
+  QSet<int> processed;
+  for (int i = mPoints.length() - 1; i >= 0; --i) {
+    if (processed.contains(i))
+      continue;
+
+    // This tries to make sure the previous point is processed before the
+    // current point (that way the line that links both is created before trying
+    // to split it), but it could crash anyways if the previous point depends on
+    // another point that hasn't been processed also
+    for (int j = i - 1; j >= 0; --j) {
+      if (processed.contains(j))
+        continue;
+
+      if (mPoints[j] == mPrevPoints[i]) {
+        insertPoint(mPoints[j], mPrevPoints[j]);
+        processed.insert(j);
+        break;
+      }
+    }
+
     insertPoint(mPoints[i], mPrevPoints[i]);
+  }
 }
 
 void DeletePointsCommand::redo() {
