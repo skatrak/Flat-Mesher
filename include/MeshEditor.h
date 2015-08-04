@@ -77,6 +77,8 @@ public slots:
   void invertPointsOrder();
 
 signals:
+  void triangleSizeChanged(double triangleSize);
+  void wallsHeightChanged(double wallsHeight);
   void cursorMoved(const flat::Point2& point);
   void viewportChanged(const flat::Rectangle& viewport);
   void pointsAmountChanged(int amount);
@@ -104,6 +106,8 @@ protected:
   void splitLine(GraphicsLineItem *line);
 
 private:
+  void _setTriangleSize(double triangleSize);
+  void _setWallsHeight(double wallsHeight);
   void setPointsAmount(int amount);
 
   QString mFileName;

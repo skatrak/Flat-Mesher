@@ -12,13 +12,14 @@ class MeshEditor;
 
 class MeshEditorCommand: public QUndoCommand {
 protected:
-  MeshEditorCommand(MeshEditor *editor, QUndoCommand *parent = 0);
+  explicit MeshEditorCommand(MeshEditor *editor, QUndoCommand *parent = 0);
+  virtual ~MeshEditorCommand() = default;
 
   void setTriangleSize(double triangleSize);
   void setWallsHeight(double wallsHeight);
 
   GraphicsPointItem* addPoint(const flat::Point2& point, GraphicsPointItem *prev = 0);
-  void deletePoint(GraphicsPointItem *point);
+  GraphicsLineItem* deletePoint(GraphicsPointItem *point);
 
   void insertPoint(GraphicsPointItem *point, GraphicsPointItem *prev = 0);
   GraphicsLineItem* extractPoint(GraphicsPointItem *point);
@@ -34,6 +35,7 @@ class AppendPointCommand: public MeshEditorCommand {
 public:
   AppendPointCommand(MeshEditor *editor, const flat::Point2& point,
                      QUndoCommand *parent = 0);
+  virtual ~AppendPointCommand();
 
   virtual void undo();
   virtual void redo();
@@ -46,16 +48,16 @@ private:
 
 class DeletePointsCommand: public MeshEditorCommand {
 public:
-  explicit DeletePointsCommand(MeshEditor *editor,
-                               QList<GraphicsPointItem*> points,
-                               QUndoCommand *parent = 0);
+  DeletePointsCommand(MeshEditor *editor, QList<GraphicsPointItem*> points,
+                      QUndoCommand *parent = 0);
+  virtual ~DeletePointsCommand() = default;
 
   virtual void undo();
   virtual void redo();
 
 private:
-  QList<GraphicsPointItem*> mPointItems;
-  QList<flat::Point2> mPoints;
+  QList<GraphicsPointItem*> mPoints;
+  QList<GraphicsPointItem*> mPrevPoints;
 
 };
 
@@ -64,6 +66,7 @@ public:
   MovePointsCommand(MeshEditor *editor, QList<GraphicsPointItem*> points,
                     const flat::Point2& oldFirstPos,
                     QUndoCommand *parent = 0);
+  virtual ~MovePointsCommand() = default;
 
   virtual void undo();
   virtual void redo();
@@ -81,19 +84,20 @@ class SplitLineCommand: public MeshEditorCommand {
 public:
   explicit SplitLineCommand(MeshEditor *editor, GraphicsLineItem *line,
                             QUndoCommand *parent = 0);
+  virtual ~SplitLineCommand();
 
   virtual void undo();
   virtual void redo();
 
 private:
-  GraphicsLineItem *mLine;
-  GraphicsPointItem *mMiddlePoint;
+  GraphicsPointItem *mFirstPoint, *mSecondPoint, *mMiddlePoint;
 
 };
 
 class InvertOrderCommand: public MeshEditorCommand {
 public:
   explicit InvertOrderCommand(MeshEditor *editor, QUndoCommand *parent = 0);
+  virtual ~InvertOrderCommand() = default;
 
   virtual void undo();
   virtual void redo();
@@ -102,7 +106,9 @@ public:
 
 class ChangeTriangleSizeCommand: public MeshEditorCommand {
 public:
-  ChangeTriangleSizeCommand(MeshEditor *editor, double triangleSize, QUndoCommand *parent = 0);
+  ChangeTriangleSizeCommand(MeshEditor *editor, double triangleSize,
+                            QUndoCommand *parent = 0);
+  virtual ~ChangeTriangleSizeCommand() = default;
 
   virtual void undo();
   virtual void redo();
@@ -114,7 +120,9 @@ private:
 
 class ChangeWallsHeightCommand: public MeshEditorCommand {
 public:
-  ChangeWallsHeightCommand(MeshEditor *editor, double wallsHeight, QUndoCommand *parent = 0);
+  ChangeWallsHeightCommand(MeshEditor *editor, double wallsHeight,
+                           QUndoCommand *parent = 0);
+  virtual ~ChangeWallsHeightCommand() = default;
 
   virtual void undo();
   virtual void redo();

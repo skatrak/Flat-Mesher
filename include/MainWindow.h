@@ -57,6 +57,8 @@ public slots:
   void about();
 
 protected slots:
+  void onTriangleSizeChanged(double triangleSize);
+  void onWallsHeightChanged(double wallsHeight);
   void onCursorMoved(const flat::Point2& pos);
   void onViewportChanged(const flat::Rectangle& viewport);
   void onPointsAmountChanged(int amount);

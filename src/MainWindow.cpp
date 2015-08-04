@@ -158,6 +158,17 @@ void MainWindow::about() {
   MessageManager::aboutApplication(this);
 }
 
+void MainWindow::onTriangleSizeChanged(double triangleSize) {
+  mTriangleSz->setValue(triangleSize);
+  mViewport->setStepSize(triangleSize);
+  mPointX->setSingleStep(triangleSize);
+  mPointY->setSingleStep(triangleSize);
+}
+
+void MainWindow::onWallsHeightChanged(double wallsHeight) {
+  mWallsHeight->setValue(mCurrentEditor->wallsHeight());
+}
+
 void MainWindow::onCursorMoved(const flat::Point2& pos) {
   mCursorPos->setText(tr("(X = %1, Y = %2)").arg(pos.getX()).arg(pos.getY()));
 }
@@ -267,16 +278,16 @@ void MainWindow::onTabChanged(int tabIndex) {
     mCurrentEditor->setSelectionMode(mCurrentMode);
 
     mUndoGroup->setActiveStack(mCurrentEditor->undoStack());
-    mTriangleSz->setValue(mCurrentEditor->triangleSize());
     mWallsHeight->setValue(mCurrentEditor->wallsHeight());
     mViewport->setViewport(mCurrentEditor->viewport());
-    mViewport->setStepSize(mCurrentEditor->triangleSize());
-    mPointX->setSingleStep(mCurrentEditor->triangleSize());
-    mPointY->setSingleStep(mCurrentEditor->triangleSize());
 
+    onTriangleSizeChanged(mCurrentEditor->triangleSize());
+    onWallsHeightChanged(mCurrentEditor->wallsHeight());
     onSelectionChanged(mCurrentEditor->selectionType());
     onPointsAmountChanged(mCurrentEditor->pointCount());
 
+    connect(mCurrentEditor, SIGNAL(triangleSizeChanged(double)), this, SLOT(onTriangleSizeChanged(double)));
+    connect(mCurrentEditor, SIGNAL(wallsHeightChanged(double)), this, SLOT(onWallsHeightChanged(double)));
     connect(mCurrentEditor, SIGNAL(cursorMoved(flat::Point2)), this, SLOT(onCursorMoved(flat::Point2)));
     connect(mCurrentEditor, SIGNAL(viewportChanged(flat::Rectangle)), this, SLOT(onViewportChanged(flat::Rectangle)));
     connect(mCurrentEditor, SIGNAL(pointsAmountChanged(int)), this, SLOT(onPointsAmountChanged(int)));
@@ -311,10 +322,6 @@ void MainWindow::onGeneralApplyClicked() {
     mCurrentEditor->setTrianglesSize(mTriangleSz->value());
     mCurrentEditor->setWallsHeight(mWallsHeight->value());
   }
-
-  mViewport->setStepSize(mTriangleSz->value());
-  mPointX->setSingleStep(mTriangleSz->value());
-  mPointY->setSingleStep(mTriangleSz->value());
 }
 
 void MainWindow::onViewportApplyClicked() {

@@ -169,11 +169,13 @@ void MeshEditor::setFileName(const QString& fileName) {
 }
 
 void MeshEditor::setTrianglesSize(double triangleSize) {
-  mUndoStack->push(new ChangeTriangleSizeCommand(this, triangleSize));
+  if (triangleSize != mTriangleSize)
+    mUndoStack->push(new ChangeTriangleSizeCommand(this, triangleSize));
 }
 
 void MeshEditor::setWallsHeight(double wallsHeight) {
-  mUndoStack->push(new ChangeWallsHeightCommand(this, wallsHeight));
+  if (wallsHeight != mWallsHeight)
+    mUndoStack->push(new ChangeWallsHeightCommand(this, wallsHeight));
 }
 
 void MeshEditor::loadPlan(const flat::FloorPlan& plan) {
@@ -211,7 +213,7 @@ void MeshEditor::setSelectionMode(SelectionMode mode) {
     case SelectionMode::AddPoints:
       setCursor(Qt::CrossCursor);
       mView->setDragMode(QGraphicsView::NoDrag);
-      mView->setInteractive(true);
+      mView->setInteractive(false);
       break;
     }
 
@@ -439,6 +441,23 @@ void MeshEditor::movePoint(GraphicsPointItem *point, const flat::Point2& pos) {
 
 void MeshEditor::splitLine(GraphicsLineItem *line) {
   mUndoStack->push(new SplitLineCommand(this, line));
+}
+
+void MeshEditor::_setTriangleSize(double triangleSize) {
+  if (triangleSize != mTriangleSize) {
+    mTriangleSize = triangleSize;
+    mView->setCellsSize(triangleSize);
+
+    emit triangleSizeChanged(triangleSize);
+  }
+}
+
+void MeshEditor::_setWallsHeight(double wallsHeight) {
+  if (wallsHeight != mWallsHeight) {
+    mWallsHeight = wallsHeight;
+
+    emit wallsHeightChanged(wallsHeight);
+  }
 }
 
 void MeshEditor::setPointsAmount(int amount) {
