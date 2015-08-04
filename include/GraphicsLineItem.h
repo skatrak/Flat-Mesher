@@ -21,6 +21,7 @@ public:
   void invertConnection();
   void updateEnds();
   QPair<GraphicsPointItem*, GraphicsLineItem*> splitLine();
+  GraphicsLineItem* splitLine(GraphicsPointItem *point);
 
   void cellSizeChanged(double cellSize);
 

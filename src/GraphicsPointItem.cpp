@@ -92,7 +92,7 @@ QPair<GraphicsLineItem*, GraphicsLineItem*> GraphicsPointItem::detach() {
       inL->setSrc(nullptr);
       inL->setDest(nullptr);
 
-      inP->mOutputLine = inP->mOutputLine = nullptr;
+      inP->mInputLine = inP->mOutputLine = nullptr;
     }
     else {
       outP->setInputLine(inL);

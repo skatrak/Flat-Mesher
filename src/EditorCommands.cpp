@@ -25,33 +25,48 @@ void MeshEditorCommand::setWallsHeight(double wallsHeight) {
 
 GraphicsPointItem* MeshEditorCommand::addPoint(const flat::Point2& point,
                                                GraphicsPointItem *prev) {
-  GraphicsPointItem *newPoint = nullptr;
+  GraphicsPointItem *newPoint = new GraphicsPointItem(point);
+  insertPoint(newPoint, prev);
+
+  return newPoint;
+}
+
+GraphicsLineItem* MeshEditorCommand::deletePoint(GraphicsPointItem *point) {
+  GraphicsLineItem *line = extractPoint(point);
+
+  if (point)
+    delete point;
+
+  if (!line->dest() && !line->src()) {
+    delete line;
+    line = nullptr;
+  }
+
+  return line;
+}
+
+void MeshEditorCommand::insertPoint(GraphicsPointItem *point, GraphicsPointItem *prev) {
+  if (!point)
+    return;
 
   if (!mEditor->mFirstPoint) {
-    mEditor->mFirstPoint = newPoint = new GraphicsPointItem(point);
-    newPoint->cellSizeChanged(mEditor->mTriangleSize);
-    newPoint->setHighlight(HighlightMode::First);
-    mEditor->mScene->addItem(mEditor->mFirstPoint);
+    mEditor->mFirstPoint = point;
+    point->setHighlight(HighlightMode::First);
   }
   else {
     if (mEditor->pointCount() == 1) {
-      newPoint = new GraphicsPointItem(point);
-      newPoint->cellSizeChanged(mEditor->mTriangleSize);
-
-      GraphicsLineItem *l1 = new GraphicsLineItem(mEditor->mFirstPoint, newPoint);
-      GraphicsLineItem *l2 = new GraphicsLineItem(newPoint, mEditor->mFirstPoint);
+      GraphicsLineItem *l1 = new GraphicsLineItem(mEditor->mFirstPoint, point);
+      GraphicsLineItem *l2 = new GraphicsLineItem(point, mEditor->mFirstPoint);
       l1->cellSizeChanged(mEditor->mTriangleSize);
       l2->cellSizeChanged(mEditor->mTriangleSize);
 
       mEditor->mFirstPoint->setOutputLine(l1);
       mEditor->mFirstPoint->setInputLine(l2);
-      newPoint->setOutputLine(l2);
-      newPoint->setInputLine(l1);
+      point->setOutputLine(l2);
+      point->setInputLine(l1);
 
-      //mEditor->mFirstPoint->setHighlighted(false);
-      newPoint->setHighlight(HighlightMode::Last);
+      point->setHighlight(HighlightMode::Last);
 
-      mEditor->mScene->addItem(newPoint);
       mEditor->mScene->addItem(l1);
       mEditor->mScene->addItem(l2);
     }
@@ -59,53 +74,52 @@ GraphicsPointItem* MeshEditorCommand::addPoint(const flat::Point2& point,
       GraphicsLineItem *iLine = prev? prev->outputLine() :
                                       mEditor->mFirstPoint->inputLine();
 
-      if (iLine->dest() == mEditor->mFirstPoint)
+      if (iLine->dest() == mEditor->mFirstPoint) {
         iLine->src()->setHighlight(HighlightMode::None);
+        point->setHighlight(HighlightMode::Last);
+      }
 
-      QPair<GraphicsPointItem*, GraphicsLineItem*> pair = iLine->splitLine();
-      mEditor->mScene->addItem(pair.first);
-      mEditor->mScene->addItem(pair.second);
+      GraphicsLineItem* oLine = iLine->splitLine(point);
+      oLine->cellSizeChanged(mEditor->mTriangleSize);
 
-      newPoint = pair.first;
-
-      if (newPoint->outputLine()->dest() == mEditor->mFirstPoint)
-        newPoint->setHighlight(HighlightMode::Last);
-
-      newPoint->setFlatPoint(point);
-      newPoint->cellSizeChanged(mEditor->mTriangleSize);
-      pair.second->cellSizeChanged(mEditor->mTriangleSize);
+      mEditor->mScene->addItem(oLine);
     }
   }
 
+  point->cellSizeChanged(mEditor->mTriangleSize);
+  mEditor->mScene->addItem(point);
+
   mEditor->setPointsAmount(mEditor->mPointsAmount + 1);
-  return newPoint;
 }
 
-void MeshEditorCommand::deletePoint(GraphicsPointItem *point) {
+GraphicsLineItem* MeshEditorCommand::extractPoint(GraphicsPointItem *point) {
+  GraphicsLineItem *newLine = nullptr;
   if (point != nullptr) {
     if (point == mEditor->mFirstPoint) {
       if (point->outputLine()) {
-        mEditor->mFirstPoint = point->outputLine()->dest();
+        mEditor->mFirstPoint = point->nextPoint();
         mEditor->mFirstPoint->setHighlight(HighlightMode::First);
       }
       else
         mEditor->mFirstPoint = nullptr;
     }
-    else if (point->outputLine() &&
-             point->outputLine()->dest() == mEditor->mFirstPoint &&
-             point->inputLine() &&
-             point->inputLine()->src())
-      point->inputLine()->src()->setHighlight(HighlightMode::Last);
+    else if (point->nextPoint() == mEditor->mFirstPoint &&
+             point->prevPoint() && point->prevPoint() != mEditor->mFirstPoint)
+      point->prevPoint()->setHighlight(HighlightMode::Last);
 
-    delete point;
+    mEditor->mScene->removeItem(point);
     mEditor->setPointsAmount(mEditor->mPointsAmount - 1);
-  }
-}
 
-void MeshEditorCommand::movePoint(GraphicsPointItem *pointItem,
-                                  const flat::Point2& point) {
-  if (pointItem)
-    pointItem->setFlatPoint(point);
+    // We return the input line because that's the one that may have been
+    // redirected. The output line is deleted because it's not used anymore.
+    QPair<GraphicsLineItem*, GraphicsLineItem*> lines = point->detach();
+    if (lines.second)
+      delete lines.second;
+
+    newLine = lines.first;
+  }
+
+  return newLine;
 }
 
 void MeshEditorCommand::movePoints(QList<GraphicsPointItem*> pointItems,

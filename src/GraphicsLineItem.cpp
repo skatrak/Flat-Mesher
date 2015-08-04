@@ -62,17 +62,28 @@ QPair<GraphicsPointItem*, GraphicsLineItem*> GraphicsLineItem::splitLine() {
                      (src.getY() + dest.getY()) / 2.0);
 
     GraphicsPointItem *middlePoint = new GraphicsPointItem(mid, parentItem());
-    GraphicsLineItem *nextLine = new GraphicsLineItem(middlePoint, mDest);
-
-    middlePoint->setOutputLine(nextLine);
-    middlePoint->setInputLine(this);
-    mDest->setInputLine(nextLine);
-    setDest(middlePoint);
+    GraphicsLineItem *nextLine = splitLine(middlePoint);
 
     return {middlePoint, nextLine};
   }
 
   return {nullptr, nullptr};
+}
+
+GraphicsLineItem* GraphicsLineItem::splitLine(GraphicsPointItem *point) {
+  GraphicsLineItem *nextLine = nullptr;
+
+  if (mSrc && mDest && point) {
+    nextLine = new GraphicsLineItem(point, mDest, parentItem());
+
+    point->setOutputLine(nextLine);
+    point->setInputLine(this);
+    mDest->setInputLine(nextLine);
+
+    setDest(point);
+  }
+
+  return nextLine;
 }
 
 void GraphicsLineItem::cellSizeChanged(double cellSize) {

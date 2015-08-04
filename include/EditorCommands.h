@@ -19,7 +19,10 @@ protected:
 
   GraphicsPointItem* addPoint(const flat::Point2& point, GraphicsPointItem *prev = 0);
   void deletePoint(GraphicsPointItem *point);
-  void movePoint(GraphicsPointItem *pointItem, const flat::Point2& point);
+
+  void insertPoint(GraphicsPointItem *point, GraphicsPointItem *prev = 0);
+  GraphicsLineItem* extractPoint(GraphicsPointItem *point);
+
   void movePoints(QList<GraphicsPointItem*> pointItems, const flat::Point2& offset);
   QPair<GraphicsPointItem*, GraphicsLineItem*> splitLine(GraphicsLineItem *line);
   void invertPointsOrder();
