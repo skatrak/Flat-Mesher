@@ -2,6 +2,7 @@
 #define GRAPHICSPOINTITEM
 
 #include <QGraphicsEllipseItem>
+#include <QObject>
 #include <QPair>
 
 #include <FlatMesher/Point2.h>
@@ -14,7 +15,9 @@ enum class HighlightMode {
   Last
 };
 
-class GraphicsPointItem: public QGraphicsEllipseItem {
+class GraphicsPointItem: public QObject, public QGraphicsEllipseItem {
+  Q_OBJECT
+
 public:
    GraphicsPointItem(const flat::Point2& pos, QGraphicsItem *parent = 0);
   ~GraphicsPointItem();
@@ -36,11 +39,14 @@ public:
 
   void cellSizeChanged(double cellSize);
 
+signals:
+  void itemMoved(GraphicsPointItem *item, const flat::Point2& oldPos);
+
 protected:
   QVariant itemChange(GraphicsItemChange change, const QVariant &value);
 
 private:
-  flat::Point2 mPoint;
+  flat::Point2 mPoint, mLastPoint;
   QPointF mInitialPos;
   double mCellSize;
   GraphicsLineItem *mInputLine, *mOutputLine;

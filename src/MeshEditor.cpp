@@ -18,7 +18,8 @@
 
 MeshEditor::MeshEditor(QWidget *parent): QWidget(parent),
     mTriangleSize(config::DEFAULT_TRIANGLE_SZ), mWallsHeight(config::DEFAULT_WALLS_HEIGHT),
-    mFirstPoint(nullptr), mPointsAmount(0), mMousePressed(false), mMouseMoved(false) {
+    mFirstPoint(nullptr), mPointsAmount(0), mMousePressed(false), mMouseMoved(false),
+    mFirstSelectedMoved(nullptr) {
   mUndoStack = new QUndoStack(this);
   mCurrentMode = SelectionMode::Selection;
 
@@ -191,6 +192,9 @@ void MeshEditor::setViewport(const flat::Rectangle& viewport) {
 }
 
 void MeshEditor::adjustViewport() {
+  // FIXME If you add points far away and then delete them, when re-setting the
+  // FIXME viewport it will contain that points
+  // TODO Handle manually the sceneRect size so that everything works as expected
   setViewport(mScene->sceneRect());
 }
 
@@ -297,16 +301,33 @@ void MeshEditor::onMouseReleased(const QPoint& pos) {
         point = line->dest();
       } while (point && point != mFirstPoint);
     }
+    if (mFirstSelectedMoved) {
+      flat::Point2 actPoint = mFirstSelectedMoved->flatPoint();
+      QList<GraphicsPointItem*> movedPoints = selectedPointItems();
+
+      mUndoStack->push(new MovePointsCommand(this, movedPoints,
+                                             actPoint - mFirstSelectedPrevPosition));
+      if (movedPoints.length() == 1)
+        emit selectedPointMoved(actPoint);
+    }
     break;
   default:
     break;
   }
 
+  mFirstSelectedMoved = nullptr;
   mMousePressed = mMouseMoved = false;
 }
 
 void MeshEditor::onScrollBarMoved() {
   emit viewportChanged(viewport());
+}
+
+void MeshEditor::onPointDragged(GraphicsPointItem *point, const flat::Point2& oldPos) {
+  if (!mFirstSelectedMoved) {
+    mFirstSelectedMoved = point;
+    mFirstSelectedPrevPosition = oldPos;
+  }
 }
 
 void MeshEditor::setPlan(const flat::FloorPlan& plan) {
@@ -435,7 +456,7 @@ void MeshEditor::movePoint(GraphicsPointItem *point, const flat::Point2& pos) {
   if (point) {
     flat::Point2 lastPos = point->flatPoint();
     point->setFlatPoint(pos);
-    mUndoStack->push(new MovePointsCommand(this, {point}, lastPos));
+    mUndoStack->push(new MovePointsCommand(this, {point}, pos - lastPos));
   }
 }
 

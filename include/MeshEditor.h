@@ -83,6 +83,7 @@ signals:
   void viewportChanged(const flat::Rectangle& viewport);
   void pointsAmountChanged(int amount);
   void selectionChanged(SelectedItems selectionType);
+  void selectedPointMoved(const flat::Point2& point);
 
 protected slots:
   void onSelectionChanged();
@@ -90,6 +91,7 @@ protected slots:
   void onMousePressed(const QPoint& pos);
   void onMouseReleased(const QPoint& pos);
   void onScrollBarMoved();
+  void onPointDragged(GraphicsPointItem *point, const flat::Point2& oldPos);
 
 protected:
   void setPlan(const flat::FloorPlan& plan);
@@ -123,6 +125,9 @@ private:
   GridGraphicsView *mView;
 
   bool mMousePressed, mMouseMoved;
+
+  GraphicsPointItem *mFirstSelectedMoved;
+  flat::Point2 mFirstSelectedPrevPosition;
 
 };
 

@@ -7,7 +7,8 @@
 #include <QPen>
 
 GraphicsPointItem::GraphicsPointItem(const flat::Point2& pos, QGraphicsItem *parent):
-    QGraphicsEllipseItem(parent), mInputLine(nullptr), mOutputLine(nullptr) {
+    QObject(nullptr), QGraphicsEllipseItem(parent), mInputLine(nullptr),
+    mOutputLine(nullptr) {
   setFlatPoint(pos);
 
   setFlag(QGraphicsItem::ItemIsSelectable);
@@ -43,7 +44,7 @@ GraphicsPointItem* GraphicsPointItem::prevPoint() {
 }
 
 void GraphicsPointItem::setFlatPoint(const flat::Point2& point) {
-  mPoint = point;
+  mPoint = mLastPoint = point;
   cellSizeChanged(rect().size().width() * 2);
 
   if (mInputLine)
@@ -121,16 +122,28 @@ void GraphicsPointItem::cellSizeChanged(double cellSize) {
 }
 
 QVariant GraphicsPointItem::itemChange(GraphicsItemChange change, const QVariant& value) {
-  if (change == ItemPositionChange && scene()) {
-    QPointF scenePoint = MeshEditor::snapToGrid(value.toPointF(), mCellSize);
-    mPoint = MeshEditor::mapToFlat(mInitialPos + scenePoint);
+  if (scene()) {
+    QPointF scenePoint;
 
-    if (mInputLine)
-      mInputLine->updateEnds();
-    if (mOutputLine)
-      mOutputLine->updateEnds();
+    switch (change) {
+    case ItemPositionChange:
+      scenePoint = MeshEditor::snapToGrid(value.toPointF(), mCellSize);
+      mPoint = MeshEditor::mapToFlat(mInitialPos + scenePoint);
 
-    return scenePoint;
+      if (mInputLine)
+        mInputLine->updateEnds();
+      if (mOutputLine)
+        mOutputLine->updateEnds();
+
+      return scenePoint;
+    case ItemPositionHasChanged:
+      emit itemMoved(this, mLastPoint);
+      mLastPoint = mPoint;
+
+      break;
+    default:
+      break;
+    }
   }
 
   return QGraphicsItem::itemChange(change, value);

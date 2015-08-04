@@ -64,7 +64,7 @@ private:
 class MovePointsCommand: public MeshEditorCommand {
 public:
   MovePointsCommand(MeshEditor *editor, QList<GraphicsPointItem*> points,
-                    const flat::Point2& oldFirstPos,
+                    const flat::Point2& offset,
                     QUndoCommand *parent = 0);
   virtual ~MovePointsCommand() = default;
 

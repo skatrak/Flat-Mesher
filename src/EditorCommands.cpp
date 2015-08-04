@@ -27,6 +27,9 @@ GraphicsPointItem* MeshEditorCommand::addPoint(const flat::Point2& point,
   GraphicsPointItem *newPoint = new GraphicsPointItem(point);
   insertPoint(newPoint, prev);
 
+  mEditor->connect(newPoint, SIGNAL(itemMoved(GraphicsPointItem*,flat::Point2)),
+                   mEditor, SLOT(onPointDragged(GraphicsPointItem*,flat::Point2)));
+
   return newPoint;
 }
 
@@ -106,6 +109,7 @@ GraphicsLineItem* MeshEditorCommand::extractPoint(GraphicsPointItem *point) {
              point->prevPoint() && point->prevPoint() != mEditor->mFirstPoint)
       point->prevPoint()->setHighlight(HighlightMode::Last);
 
+    point->setSelected(false);
     mEditor->mScene->removeItem(point);
     mEditor->setPointsAmount(mEditor->mPointsAmount - 1);
 
@@ -133,6 +137,9 @@ QPair<GraphicsPointItem*, GraphicsLineItem*> MeshEditorCommand::splitLine(Graphi
     QPair<GraphicsPointItem*, GraphicsLineItem*> pair = line->splitLine();
     GraphicsPointItem *point = pair.first;
     GraphicsLineItem *newLine = pair.second;
+
+    mEditor->connect(point, SIGNAL(itemMoved(GraphicsPointItem*,flat::Point2)),
+                     mEditor, SLOT(onPointDragged(GraphicsPointItem*,flat::Point2)));
 
     point->cellSizeChanged(mEditor->mTriangleSize);
     newLine->cellSizeChanged(mEditor->mTriangleSize);
@@ -180,6 +187,10 @@ AppendPointCommand::AppendPointCommand(MeshEditor *editor, const flat::Point2& p
                                        QUndoCommand *parent):
     MeshEditorCommand(editor, parent), mPosition(point), mPoint(nullptr) {
   mPoint = new GraphicsPointItem(point);
+
+  mEditor->connect(mPoint, SIGNAL(itemMoved(GraphicsPointItem*,flat::Point2)),
+                   mEditor, SLOT(onPointDragged(GraphicsPointItem*,flat::Point2)));
+
   setText(QObject::tr("Add point (%1, %2)").arg(point.getX()).arg(point.getY()));
 }
 
@@ -214,6 +225,7 @@ void DeletePointsCommand::undo() {
   // We insert them in reverse order to always have the needed line connected
   // to the previous point, so it's possible to split it and insert this point
   // in the middle
+  // FIXME This fails when consecutive points are deleted
   for (int i = mPoints.length() - 1; i >= 0; --i)
     insertPoint(mPoints[i], mPrevPoints[i]);
 }
@@ -228,12 +240,10 @@ void DeletePointsCommand::redo() {
 // /////////////////////////////////////////////////////////////////////////////
 
 MovePointsCommand::MovePointsCommand(MeshEditor *editor, QList<GraphicsPointItem*> points,
-                                     const flat::Point2& oldFirstPos,
+                                     const flat::Point2& offset,
                                      QUndoCommand *parent):
-    MeshEditorCommand(editor, parent), mPoints(points) {
-
+    MeshEditorCommand(editor, parent), mOffset(offset), mPoints(points) {
   mOldPos.reserve(mPoints.size());
-  mOffset = mPoints[0]->flatPoint() - oldFirstPos;
 
   for (GraphicsPointItem* point: mPoints)
     mOldPos << point->flatPoint() - mOffset;

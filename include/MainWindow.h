@@ -64,6 +64,7 @@ protected slots:
   void onPointsAmountChanged(int amount);
   void onSelectionChanged(SelectedItems selectionType);
   void onSavedChanged(bool saved);
+  void onSelectedPointMoved(const flat::Point2& point);
 
 protected:
   virtual void closeEvent(QCloseEvent *event);

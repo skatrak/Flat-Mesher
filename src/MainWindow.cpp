@@ -233,6 +233,11 @@ void MainWindow::onSavedChanged(bool saved) {
   }
 }
 
+void MainWindow::onSelectedPointMoved(const flat::Point2& point) {
+  mPointX->setValue(point.getX());
+  mPointY->setValue(point.getY());
+}
+
 void MainWindow::closeEvent(QCloseEvent *event) {
   closeAllFlats();
 
@@ -292,6 +297,7 @@ void MainWindow::onTabChanged(int tabIndex) {
     connect(mCurrentEditor, SIGNAL(viewportChanged(flat::Rectangle)), this, SLOT(onViewportChanged(flat::Rectangle)));
     connect(mCurrentEditor, SIGNAL(pointsAmountChanged(int)), this, SLOT(onPointsAmountChanged(int)));
     connect(mCurrentEditor, SIGNAL(selectionChanged(SelectedItems)), this, SLOT(onSelectionChanged(SelectedItems)));
+    connect(mCurrentEditor, SIGNAL(selectedPointMoved(flat::Point2)), this, SLOT(onSelectedPointMoved(flat::Point2)));
 
     ui->actionShowGrid->setChecked(mCurrentEditor->isGridVisible());
     editorAvailable(true);
