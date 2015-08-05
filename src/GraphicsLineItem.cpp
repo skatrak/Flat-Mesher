@@ -7,15 +7,15 @@
 #include <FlatMesher/Line2.h>
 
 #include <QPen>
+#include <QStyleOptionGraphicsItem>
 
 GraphicsLineItem::GraphicsLineItem(GraphicsPointItem *src, GraphicsPointItem *dest,
                                    QGraphicsItem *parent):
-    QGraphicsLineItem(parent), mSrc(nullptr), mDest(nullptr) {
+    QGraphicsLineItem(parent), mColor(Qt::black), mSrc(nullptr), mDest(nullptr) {
   setSrc(src);
   setDest(dest);
 
   setFlag(QGraphicsItem::ItemIsSelectable);
-  setAcceptHoverEvents(true);
   setZValue(-1.0);
 
   cellSizeChanged(config::DEFAULT_TRIANGLE_SZ);
@@ -87,6 +87,21 @@ GraphicsLineItem* GraphicsLineItem::splitLine(GraphicsPointItem *point) {
 }
 
 void GraphicsLineItem::cellSizeChanged(double cellSize) {
-  QPen pen(Qt::black, cellSize / 8);
-  setPen(pen);
+  setPen(QPen(mColor, cellSize / 8));
+}
+
+QVariant GraphicsLineItem::itemChange(GraphicsItemChange change, const QVariant& value) {
+  if (change == ItemSelectedHasChanged) {
+    mColor = value.toBool()? QColor(204, 128, 14) : Qt::black;
+    cellSizeChanged(pen().widthF() * 8);
+  }
+
+  return QGraphicsItem::itemChange(change, value);
+}
+
+void GraphicsLineItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
+                             QWidget *widget) {
+  QStyleOptionGraphicsItem opt = *option;
+  opt.state &= ~QStyle::State_Selected;
+  QGraphicsLineItem::paint(painter, &opt, widget);
 }

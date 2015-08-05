@@ -5,10 +5,11 @@
 #include "MeshEditor.h"
 
 #include <QPen>
+#include <QStyleOptionGraphicsItem>
 
 GraphicsPointItem::GraphicsPointItem(const flat::Point2& pos, QGraphicsItem *parent):
-    QObject(nullptr), QGraphicsEllipseItem(parent), mInputLine(nullptr),
-    mOutputLine(nullptr) {
+    QObject(nullptr), QGraphicsEllipseItem(parent), mEdgesColor(Qt::black),
+    mInputLine(nullptr), mOutputLine(nullptr) {
   setFlatPoint(pos);
 
   setFlag(QGraphicsItem::ItemIsSelectable);
@@ -64,13 +65,13 @@ void GraphicsPointItem::setOutputLine(GraphicsLineItem *line) {
 void GraphicsPointItem::setHighlight(HighlightMode highlight) {
   switch (highlight) {
   case HighlightMode::None:
-    setBrush(QBrush(Qt::blue));
+    setBrush(QBrush(QColor(50, 82, 179)));
     break;
   case HighlightMode::First:
-    setBrush(QBrush(Qt::green));
+    setBrush(QBrush(QColor(82, 179, 50)));
     break;
   case HighlightMode::Last:
-    setBrush(QBrush(Qt::red));
+    setBrush(QBrush(QColor(179, 50, 82)));
     break;
   }
 }
@@ -106,7 +107,7 @@ QPair<GraphicsLineItem*, GraphicsLineItem*> GraphicsPointItem::detach() {
 }
 
 void GraphicsPointItem::cellSizeChanged(double cellSize) {
-  QPen pen(Qt::black, cellSize / 10);
+  QPen pen(mEdgesColor, cellSize / 10);
   setPen(pen);
 
   double sz = cellSize / 2;
@@ -141,10 +142,22 @@ QVariant GraphicsPointItem::itemChange(GraphicsItemChange change, const QVariant
       mLastPoint = mPoint;
 
       break;
+    case ItemSelectedHasChanged:
+      mEdgesColor = value.toBool()? QColor(204, 128, 14) : Qt::black;
+      cellSizeChanged(mCellSize);
+
+      break;
     default:
       break;
     }
   }
 
   return QGraphicsItem::itemChange(change, value);
+}
+
+void GraphicsPointItem::paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
+                              QWidget *widget) {
+  QStyleOptionGraphicsItem opt = *option;
+  opt.state &= ~QStyle::State_Selected;
+  QGraphicsEllipseItem::paint(painter, &opt, widget);
 }

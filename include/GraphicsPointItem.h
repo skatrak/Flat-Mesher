@@ -43,9 +43,13 @@ signals:
   void itemMoved(GraphicsPointItem *item, const flat::Point2& oldPos);
 
 protected:
-  QVariant itemChange(GraphicsItemChange change, const QVariant &value);
+  virtual QVariant itemChange(GraphicsItemChange change, const QVariant &value);
+  virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
+                     QWidget *widget);
 
 private:
+  QColor mEdgesColor;
+
   flat::Point2 mPoint, mLastPoint;
   QPointF mInitialPos;
   double mCellSize;

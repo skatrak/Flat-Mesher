@@ -25,7 +25,13 @@ public:
 
   void cellSizeChanged(double cellSize);
 
+protected:
+  virtual QVariant itemChange(GraphicsItemChange change, const QVariant& value);
+  virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option,
+                     QWidget * widget = 0);
+
 private:
+  QColor mColor;
   GraphicsPointItem *mSrc, *mDest;
 
 };
