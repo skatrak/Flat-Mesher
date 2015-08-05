@@ -19,6 +19,7 @@
 #include <QLabel>
 #include <QMessageBox>
 #include <QPushButton>
+#include <QShortcut>
 #include <QUndoGroup>
 #include <QUndoStack>
 #include <QWidget>
@@ -579,6 +580,7 @@ void MainWindow::setupPropertiesSidebar() {
   QLabel *xLabel = new QLabel(tr("X"), mSelectionPoint);
   QLabel *yLabel = new QLabel(tr("Y"), mSelectionPoint);
   QPushButton *selectionDelete = new QPushButton(tr("Delete point/s"), mSelectionPoint);
+  QShortcut *deleteShortcut = new QShortcut(Qt::Key_Delete, this);
 
   layout = new QGridLayout(mSelectionPoint);
   layout->setMargin(0);
@@ -590,6 +592,7 @@ void MainWindow::setupPropertiesSidebar() {
   layout->addWidget(selectionDelete, 1, 2, 1, 2);
 
   connect(mPointMove, SIGNAL(clicked()), this, SLOT(onPointMoveClicked()));
+  connect(deleteShortcut, SIGNAL(activated()), selectionDelete, SLOT(click()));
   connect(selectionDelete, SIGNAL(clicked()), this, SLOT(onPointDeleteClicked()));
 
   // Selection options (Lines)
