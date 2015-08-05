@@ -359,6 +359,14 @@ void MainWindow::onPointDeleteClicked() {
   }
 }
 
+void MainWindow::onSnapToGridClicked() {
+  if (mCurrentEditor != nullptr) {
+    SelectedItems selType = mCurrentEditor->selectionType();
+    if (selType == SelectedItems::Point || selType == SelectedItems::PointSet)
+      mCurrentEditor->snapSelectedPointsToGrid();
+  }
+}
+
 void MainWindow::onLineSplitClicked() {
   if (mCurrentEditor != nullptr && mCurrentEditor->selectionType() == SelectedItems::Line)
     mCurrentEditor->splitSelectedLine();
@@ -581,6 +589,7 @@ void MainWindow::setupPropertiesSidebar() {
   QLabel *xLabel = new QLabel(tr("X"), mSelectionPoint);
   QLabel *yLabel = new QLabel(tr("Y"), mSelectionPoint);
   QPushButton *selectionDelete = new QPushButton(tr("Delete point/s"), mSelectionPoint);
+  QPushButton *snapToGrid = new QPushButton(tr("Snap to grid"), mSelectionPoint);
   QShortcut *deleteShortcut = new QShortcut(Qt::Key_Delete, this);
 
   layout = new QGridLayout(mSelectionPoint);
@@ -591,10 +600,12 @@ void MainWindow::setupPropertiesSidebar() {
   layout->addWidget(mPointY,         0, 3, 1, 1);
   layout->addWidget(mPointMove,      1, 0, 1, 2);
   layout->addWidget(selectionDelete, 1, 2, 1, 2);
+  layout->addWidget(snapToGrid,      2, 0, 1, 2);
 
   connect(mPointMove, SIGNAL(clicked()), this, SLOT(onPointMoveClicked()));
   connect(deleteShortcut, SIGNAL(activated()), selectionDelete, SLOT(click()));
   connect(selectionDelete, SIGNAL(clicked()), this, SLOT(onPointDeleteClicked()));
+  connect(snapToGrid, SIGNAL(clicked()), this, SLOT(onSnapToGridClicked()));
 
   // Selection options (Lines)
   mSelectionLine = new QWidget(this);

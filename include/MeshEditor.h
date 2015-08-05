@@ -51,6 +51,7 @@ public:
   static flat::Point2 mapToFlat(const QPointF& point);
   static flat::Line2 mapToFlat(const QLineF& line);
   static flat::Rectangle mapToFlat(const QRectF& rect);
+  static flat::Point2 snapToGrid(const flat::Point2& point, double triangleSize);
   static QPointF mapFromFlat(const flat::Point2& point);
   static QLineF mapFromFlat(const flat::Line2 &line);
   static QRectF mapFromFlat(const flat::Rectangle& rect);
@@ -71,6 +72,7 @@ public slots:
 
   void changeSelectedPoint(const flat::Point2& point);
   void deleteSelectedPoints();
+  void snapSelectedPointsToGrid();
   void splitSelectedLine();
 
   void selectAllPoints();

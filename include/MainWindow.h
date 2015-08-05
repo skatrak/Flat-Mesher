@@ -82,6 +82,7 @@ private slots:
   void onViewportResetClicked();
   void onPointMoveClicked();
   void onPointDeleteClicked();
+  void onSnapToGridClicked();
   void onLineSplitClicked();
 
 private:

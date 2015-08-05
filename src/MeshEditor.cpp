@@ -147,6 +147,13 @@ flat::Line2 MeshEditor::mapToFlat(const QLineF& line) {
   return flat::Line2(mapToFlat(line.p1()), mapToFlat(line.p2()));
 }
 
+flat::Point2 MeshEditor::snapToGrid(const flat::Point2& point, double triangleSize) {
+  double x = std::round(point.getX() / triangleSize) * triangleSize;
+  double y = std::round(point.getY() / triangleSize) * triangleSize;
+
+  return flat::Point2(x, y);
+}
+
 QPointF MeshEditor::mapFromFlat(const flat::Point2& point) {
   return QPointF(point.getX(), -point.getY());
 }
@@ -229,6 +236,11 @@ void MeshEditor::changeSelectedPoint(const flat::Point2& point) {
 
 void MeshEditor::deleteSelectedPoints() {
   mUndoStack->push(new DeletePointsCommand(this, selectedPointItems()));
+}
+
+void MeshEditor::snapSelectedPointsToGrid() {
+  for (GraphicsPointItem *point: selectedPointItems())
+    point->setFlatPoint(snapToGrid(point->flatPoint(), mTriangleSize));
 }
 
 void MeshEditor::splitSelectedLine() {
