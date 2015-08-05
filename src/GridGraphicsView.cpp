@@ -66,12 +66,15 @@ void GridGraphicsView::wheelEvent(QWheelEvent* event) {
 
   if (wheelEvent->modifiers().testFlag(Qt::ControlModifier)) {
     setResizeAnchor(QGraphicsView::AnchorUnderMouse);
-    double scaleFactor = 1.15;
 
+    double scaleFactor;
     if (wheelEvent->delta() > 0)
-      scale(scaleFactor, scaleFactor);
+      scaleFactor = 1.15;
     else
-      scale(1.0 / scaleFactor, 1.0 / scaleFactor);
+      scaleFactor = 1.0 / 1.15;
+
+    scale(scaleFactor, scaleFactor);
+    emit zoomChanged(scaleFactor);
   }
   else
     QGraphicsView::wheelEvent(event);

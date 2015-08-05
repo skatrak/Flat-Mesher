@@ -22,6 +22,7 @@ signals:
   void mouseMoved(const QPoint& pos);
   void mousePressed(const QPoint& pos);
   void mouseReleased(const QPoint& pos);
+  void zoomChanged(double scaleFactor);
 
 protected:
   void drawBackground(QPainter *painter, const QRectF &rect);

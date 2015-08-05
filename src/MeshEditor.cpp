@@ -41,8 +41,9 @@ MeshEditor::MeshEditor(QWidget *parent): QWidget(parent),
   connect(mView,                        SIGNAL(mouseMoved(QPoint)),    this, SLOT(onMouseMoved(QPoint)));
   connect(mView,                        SIGNAL(mousePressed(QPoint)),  this, SLOT(onMousePressed(QPoint)));
   connect(mView,                        SIGNAL(mouseReleased(QPoint)), this, SLOT(onMouseReleased(QPoint)));
-  connect(mView->horizontalScrollBar(), SIGNAL(valueChanged(int)),     this, SLOT(onScrollBarMoved()));
-  connect(mView->verticalScrollBar(),   SIGNAL(valueChanged(int)),     this, SLOT(onScrollBarMoved()));
+  connect(mView,                        SIGNAL(zoomChanged(double)),   this, SLOT(onViewportChanged()));
+  connect(mView->horizontalScrollBar(), SIGNAL(valueChanged(int)),     this, SLOT(onViewportChanged()));
+  connect(mView->verticalScrollBar(),   SIGNAL(valueChanged(int)),     this, SLOT(onViewportChanged()));
 }
 
 MeshEditor::MeshEditor(const QString& fileName, const flat::FloorPlan& plan, QWidget *parent):
@@ -192,10 +193,7 @@ void MeshEditor::setViewport(const flat::Rectangle& viewport) {
 }
 
 void MeshEditor::adjustViewport() {
-  // FIXME If you add points far away and then delete them, when re-setting the
-  // FIXME viewport it will contain that points
-  // TODO Handle manually the sceneRect size so that everything works as expected
-  setViewport(mScene->sceneRect());
+  setViewport(mScene->itemsBoundingRect());
 }
 
 void MeshEditor::setGridVisible(bool visible) {
@@ -319,7 +317,7 @@ void MeshEditor::onMouseReleased(const QPoint& pos) {
   mMousePressed = mMouseMoved = false;
 }
 
-void MeshEditor::onScrollBarMoved() {
+void MeshEditor::onViewportChanged() {
   emit viewportChanged(viewport());
 }
 

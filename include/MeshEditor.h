@@ -90,7 +90,7 @@ protected slots:
   void onMouseMoved(const QPoint& pos);
   void onMousePressed(const QPoint& pos);
   void onMouseReleased(const QPoint& pos);
-  void onScrollBarMoved();
+  void onViewportChanged();
   void onPointDragged(GraphicsPointItem *point, const flat::Point2& oldPos);
 
 protected:
