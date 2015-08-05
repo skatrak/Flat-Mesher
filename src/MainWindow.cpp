@@ -40,7 +40,7 @@ MainWindow::~MainWindow() {
 }
 
 void MainWindow::newFlat() {
-  configureAndSelectEditor(new MeshEditor(), tr("<unnamed>"));
+  configureAndSelectEditor(new MeshEditor, tr("<unnamed>"));
 }
 
 void MainWindow::openFlat() {
@@ -94,9 +94,13 @@ void MainWindow::saveFlatAs() {
 
     QString fileName = FileManager::saveFlat(plan);
     if (!fileName.isNull()) {
-      QString file = fileName.section('/', -1);
-      ui->planSet->tabBar()->setTabText(ui->planSet->currentIndex(), file);
       mCurrentEditor->setFileName(fileName);
+
+      // Trigger the update of the tab title
+      if (mCurrentEditor->isSaved())
+        onSavedChanged(true);
+      else
+        mCurrentEditor->setSaved();
     }
   }
 }
@@ -377,8 +381,8 @@ bool MainWindow::saveEditorModel(int tabIndex) {
         fileName = FileManager::saveFlat(plan);
 
       if (!fileName.isNull()) {
-        QString file = fileName.section('/', -1);
-        ui->planSet->tabBar()->setTabText(tabIndex, file);
+        editor->setFileName(fileName);
+        editor->setSaved();
       }
     }
 
