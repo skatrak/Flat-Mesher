@@ -165,13 +165,14 @@ void MainWindow::about() {
 
 void MainWindow::onTriangleSizeChanged(double triangleSize) {
   mTriangleSz->setValue(triangleSize);
+  mWallsHeight->setSingleStep(triangleSize);
   mViewport->setStepSize(triangleSize);
   mPointX->setSingleStep(triangleSize);
   mPointY->setSingleStep(triangleSize);
 }
 
 void MainWindow::onWallsHeightChanged(double wallsHeight) {
-  mWallsHeight->setValue(mCurrentEditor->wallsHeight());
+  mWallsHeight->setValue(wallsHeight);
 }
 
 void MainWindow::onCursorMoved(const flat::Point2& pos) {
@@ -424,7 +425,7 @@ void MainWindow::resetInputsToDefault() {
   mTriangleSz->setValue(config::DEFAULT_TRIANGLE_SZ);
 
   mWallsHeight->setRange(config::MIN_WALLS_HEIGHT, config::MAX_WALLS_HEIGHT);
-  mWallsHeight->setSingleStep(config::DELTA_WALLS_HEIGHT);
+  mWallsHeight->setSingleStep(config::DEFAULT_TRIANGLE_SZ);
   mWallsHeight->setValue(config::DEFAULT_WALLS_HEIGHT);
 
   mPointX->setRange(config::VIEWPORT_MIN_X, config::VIEWPORT_MAX_X);

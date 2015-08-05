@@ -13,7 +13,6 @@ extern const double DEFAULT_TRIANGLE_SZ;
 
 extern const double MIN_WALLS_HEIGHT;
 extern const double MAX_WALLS_HEIGHT;
-extern const double DELTA_WALLS_HEIGHT;
 extern const double DEFAULT_WALLS_HEIGHT;
 
 extern const double VIEWPORT_MIN_X;
