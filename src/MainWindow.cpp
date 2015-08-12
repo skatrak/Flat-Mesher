@@ -543,6 +543,9 @@ void MainWindow::setupPropertiesSidebar() {
   QLabel *wallsLabel = new QLabel(tr("Walls height"), general);
   QPushButton *generalApply = new QPushButton(tr("Apply"), general);
 
+  mTriangleSz->setDecimals(config::SPINBOX_DECIMALS);
+  mWallsHeight->setDecimals(config::SPINBOX_DECIMALS);
+
   QGridLayout *layout = new QGridLayout(general);
   layout->setMargin(0);
   layout->addWidget(triangleLabel, 0, 0, 1, 1);
@@ -591,6 +594,9 @@ void MainWindow::setupPropertiesSidebar() {
   QPushButton *selectionDelete = new QPushButton(tr("Delete point/s"), mSelectionPoint);
   QPushButton *snapToGrid = new QPushButton(tr("Snap to grid"), mSelectionPoint);
   QShortcut *deleteShortcut = new QShortcut(Qt::Key_Delete, this);
+
+  mPointX->setDecimals(config::SPINBOX_DECIMALS);
+  mPointY->setDecimals(config::SPINBOX_DECIMALS);
 
   layout = new QGridLayout(mSelectionPoint);
   layout->setMargin(0);

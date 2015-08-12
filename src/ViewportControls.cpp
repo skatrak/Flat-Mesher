@@ -20,6 +20,11 @@ ViewportControls::ViewportControls(QWidget *parent):
   QLabel *minYLabel = new QLabel(tr("Min. Y"), this);
   QLabel *maxYLabel = new QLabel(tr("Max. Y"), this);
 
+  mMinX->setDecimals(config::SPINBOX_DECIMALS);
+  mMaxX->setDecimals(config::SPINBOX_DECIMALS);
+  mMinY->setDecimals(config::SPINBOX_DECIMALS);
+  mMaxY->setDecimals(config::SPINBOX_DECIMALS);
+
   QGridLayout *layout = new QGridLayout(this);
   layout->setMargin(0);
 
