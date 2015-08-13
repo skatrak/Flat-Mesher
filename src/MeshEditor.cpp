@@ -345,6 +345,7 @@ void MeshEditor::setPlan(const flat::FloorPlan& plan) {
 
   mTriangleSize = plan.getTriangleSize();
   mView->setCellsSize(mTriangleSize);
+  _setWallsHeight(plan.getHeight());
 
   std::vector<flat::Point2> points = plan.getNodes();
   removePoints();
