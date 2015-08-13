@@ -9,6 +9,9 @@ std::ostream& BemgenMeshFormatter::writeMesh(std::ostream& os, const Mesh& mesh)
   std::vector<Point3> nodes = mesh.getNodes();
   std::vector<IndexTriangle> triangles = mesh.getMesh();
 
+  std::streamsize prec = os.precision();
+  os.precision(15);
+
   os << "3\n3\n\n";
 
   os << nodes.size() << '\n';
@@ -18,6 +21,8 @@ std::ostream& BemgenMeshFormatter::writeMesh(std::ostream& os, const Mesh& mesh)
   os << '\n' << triangles.size();
   for (auto i = triangles.begin(); i != triangles.end(); ++i)
     os << '\n' << *i;
+
+  os.precision(prec);
 
   return os;
 }

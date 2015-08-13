@@ -162,6 +162,9 @@ bool FloorPlan::pointInBoundary(const Point2& p) const {
 std::ostream& operator<<(std::ostream& os, const FloorPlan& fp) {
   std::vector<Point2> nodes = fp.getNodes();
 
+  std::streamsize prec = os.precision();
+  os.precision(15);
+
   os << nodes.size() << '\n';
   for (auto i = nodes.begin(); i != nodes.end(); ++i)
     os << *i << '\n';
@@ -169,6 +172,8 @@ std::ostream& operator<<(std::ostream& os, const FloorPlan& fp) {
   os << fp.getHeight() << '\n';
   os << fp.getTriangleSize() << '\n';
   
+  os.precision(prec);
+
   return os;
 }
 

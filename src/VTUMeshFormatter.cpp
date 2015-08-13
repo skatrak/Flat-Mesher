@@ -9,6 +9,9 @@ std::ostream& VTUMeshFormatter::writeMesh(std::ostream& os, const Mesh& mesh) co
   std::vector<Point3> nodes = mesh.getNodes();
   std::vector<IndexTriangle> triangles = mesh.getMesh();
 
+  std::streamsize prec = os.precision();
+  os.precision(15);
+
   os << "<?xml version=\"1.0\"?>\n"
      << "<VTKFile type=\"UnstructuredGrid\" version=\"0.1\">\n"
      << "  <UnstructuredGrid>\n"
@@ -44,6 +47,8 @@ std::ostream& VTUMeshFormatter::writeMesh(std::ostream& os, const Mesh& mesh) co
      << "    </Piece>\n"
      << "  </UnstructuredGrid>\n"
      << "</VTKFile>\n";
+
+  os.precision(prec);
 
   return os;
 }
