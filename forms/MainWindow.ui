@@ -101,7 +101,7 @@
     <property name="title">
      <string>&amp;Tools</string>
     </property>
-    <addaction name="actionFindProblems"/>
+    <addaction name="actionInspectMesh"/>
     <addaction name="actionInvertPoints"/>
    </widget>
    <widget class="QMenu" name="menuView">
@@ -345,9 +345,9 @@
     <string>Invert points order</string>
    </property>
   </action>
-  <action name="actionFindProblems">
+  <action name="actionInspectMesh">
    <property name="text">
-    <string>Find problems...</string>
+    <string>Inspect mesh...</string>
    </property>
   </action>
  </widget>

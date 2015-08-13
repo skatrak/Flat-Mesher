@@ -1,6 +1,8 @@
 #include "MeshAnalyzer.h"
 #include "ui_MeshAnalyzer.h"
 
+#include "Configuration.h"
+
 #include <FlatMesher/FlatMesh.h>
 #include <FlatMesher/FloorPlan.h>
 #include <FlatMesher/Line2.h>
@@ -128,14 +130,22 @@ void MeshAnalyzer::processMesh(const flat::FloorPlan& plan) {
   else
     setProcessingCompleted(100);
 
+  int d = config::SPINBOX_DECIMALS;
+  flat::Rectangle bb = plan.boundingBox();
+  ui->textBoundingBox->setText(QString("%1 %2 %3 %4")
+                               .arg(bb.getLeft(),   0, 'f', d)
+                               .arg(bb.getBottom(), 0, 'f', d)
+                               .arg(bb.getRight(),  0, 'f', d)
+                               .arg(bb.getTop(),    0, 'f', d));
+
   if (!checker.errorsFound()) {
     addMessage(tr("No errors found."), QColor(Qt::green));
 
     flat::FlatMesh mesh;
     mesh.createFromPlan(&plan);
 
-    ui->labelPoints->setText(tr("<b>Elements:</b> %1").arg(mesh.getNodes().size()));
-    ui->labelTriangles->setText(tr("<b>Triangles:</b> %1").arg(mesh.getMesh().size()));
+    ui->labelPointsAmount->setText(QString::number(mesh.getNodes().size()));
+    ui->labelTrianglesAmount->setText(QString::number(mesh.getMesh().size()));
   }
 }
 

@@ -50,7 +50,7 @@ public slots:
 
   // Tools
   void toolChanged(QAction *toolAction);
-  void findProblems();
+  void inspectMesh();
   void invertPoints();
 
   // Help

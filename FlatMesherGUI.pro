@@ -24,7 +24,8 @@ SOURCES += src/Main.cpp\
     src/GraphicsLineItem.cpp \
     src/MeshAnalyzer.cpp \
     src/EditorCommands.cpp \
-    src/MessageManager.cpp
+    src/MessageManager.cpp \
+    src/CustomSpinbox.cpp
 
 HEADERS  += include/MainWindow.h \
     include/CollapsibleWidget.h \
@@ -39,7 +40,8 @@ HEADERS  += include/MainWindow.h \
     include/GraphicsLineItem.h \
     include/MeshAnalyzer.h \
     include/EditorCommands.h \
-    include/MessageManager.h
+    include/MessageManager.h \
+    include/CustomSpinbox.h
 
 QMAKE_CXXFLAGS += -fopenmp
 

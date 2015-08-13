@@ -1,29 +1,24 @@
 #include "ViewportControls.h"
 
 #include "Configuration.h"
+#include "CustomSpinbox.h"
 
 #include <FlatMesher/Rectangle.h>
 
-#include <QDoubleSpinBox>
 #include <QGridLayout>
 #include <QLabel>
 
 ViewportControls::ViewportControls(QWidget *parent):
     QWidget(parent), mStep(config::DEFAULT_TRIANGLE_SZ) {
 
-  mMinX = new QDoubleSpinBox(this);
-  mMaxX = new QDoubleSpinBox(this);
-  mMinY = new QDoubleSpinBox(this);
-  mMaxY = new QDoubleSpinBox(this);
+  mMinX = new CustomSpinbox(this);
+  mMaxX = new CustomSpinbox(this);
+  mMinY = new CustomSpinbox(this);
+  mMaxY = new CustomSpinbox(this);
   QLabel *minXLabel = new QLabel(tr("Min. X"), this);
   QLabel *maxXLabel = new QLabel(tr("Max. X"), this);
   QLabel *minYLabel = new QLabel(tr("Min. Y"), this);
   QLabel *maxYLabel = new QLabel(tr("Max. Y"), this);
-
-  mMinX->setDecimals(config::SPINBOX_DECIMALS);
-  mMaxX->setDecimals(config::SPINBOX_DECIMALS);
-  mMinY->setDecimals(config::SPINBOX_DECIMALS);
-  mMaxY->setDecimals(config::SPINBOX_DECIMALS);
 
   QGridLayout *layout = new QGridLayout(this);
   layout->setMargin(0);

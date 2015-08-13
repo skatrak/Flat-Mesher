@@ -1,14 +1,14 @@
 #include "Configuration.h"
 
-const char* config::VERSION_STRING = "0.1";
+const char* config::VERSION_STRING = "1.1";
 
 const int config::HEADER_FONT_SZ = 10;
 
-const int config::SPINBOX_DECIMALS = 4;
+const int config::SPINBOX_DECIMALS = 8;
 
-const double config::MIN_TRIANGLE_SZ = 0.05;
+const double config::MIN_TRIANGLE_SZ = 0.01;
 const double config::MAX_TRIANGLE_SZ = 50.0;
-const double config::DEFAULT_TRIANGLE_SZ = 0.5;
+const double config::DEFAULT_TRIANGLE_SZ = 0.25;
 
 const double config::MIN_WALLS_HEIGHT = 0.05;
 const double config::MAX_WALLS_HEIGHT = 500.0;

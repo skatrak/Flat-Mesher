@@ -3,6 +3,7 @@
 
 #include "CollapsibleWidget.h"
 #include "Configuration.h"
+#include "CustomSpinbox.h"
 #include "FileManager.h"
 #include "MeshAnalyzer.h"
 #include "MeshEditor.h"
@@ -14,7 +15,6 @@
 
 #include <QActionGroup>
 #include <QCloseEvent>
-#include <QDoubleSpinBox>
 #include <QGridLayout>
 #include <QLabel>
 #include <QMessageBox>
@@ -146,7 +146,7 @@ void MainWindow::toolChanged(QAction *toolAction) {
     mCurrentEditor->setSelectionMode(mCurrentMode);
 }
 
-void MainWindow::findProblems() {
+void MainWindow::inspectMesh() {
   if (mCurrentEditor) {
     MeshAnalyzer *analyzer = new MeshAnalyzer(this);
     analyzer->show();
@@ -455,7 +455,7 @@ void MainWindow::editorAvailable(bool available) {
   ui->actionSaveAll->setEnabled(available);
   ui->actionExport->setEnabled(available);
   ui->actionSelectAll->setEnabled(available);
-  ui->actionFindProblems->setEnabled(available);
+  ui->actionInspectMesh->setEnabled(available);
   ui->actionInvertPoints->setEnabled(available);
 }
 
@@ -475,8 +475,8 @@ void MainWindow::setupActions() {
   mActionAddTool->setActionGroup(mToolActions);
 
   QList<QAction*> actGroup = mToolActions->actions();
-  ui->menuTools->insertActions(ui->actionFindProblems, actGroup);
-  ui->menuTools->insertSeparator(ui->actionFindProblems);
+  ui->menuTools->insertActions(ui->actionInspectMesh, actGroup);
+  ui->menuTools->insertSeparator(ui->actionInspectMesh);
   ui->toolBar->addActions(actGroup);
 
   mUndoGroup = new QUndoGroup(this);
@@ -521,7 +521,7 @@ void MainWindow::setupActions() {
 
   connect(ui->actionSelectAll,      SIGNAL(triggered()),             this, SLOT(selectAll()));
 
-  connect(ui->actionFindProblems,   SIGNAL(triggered()),             this, SLOT(findProblems()));
+  connect(ui->actionInspectMesh,   SIGNAL(triggered()),             this, SLOT(inspectMesh()));
   connect(ui->actionInvertPoints,   SIGNAL(triggered()),             this, SLOT(invertPoints()));
 
   connect(ui->actionShowGrid,       SIGNAL(toggled(bool)),           this, SLOT(onGridVisibilityChanged(bool)));
@@ -537,14 +537,11 @@ void MainWindow::setupPropertiesSidebar() {
   // General options
   QWidget *general = new QWidget(this);
 
-  mTriangleSz = new QDoubleSpinBox(general);
-  mWallsHeight = new QDoubleSpinBox(general);
+  mTriangleSz = new CustomSpinbox(general);
+  mWallsHeight = new CustomSpinbox(general);
   QLabel *triangleLabel = new QLabel(tr("Triangle size"), general);
   QLabel *wallsLabel = new QLabel(tr("Walls height"), general);
   QPushButton *generalApply = new QPushButton(tr("Apply"), general);
-
-  mTriangleSz->setDecimals(config::SPINBOX_DECIMALS);
-  mWallsHeight->setDecimals(config::SPINBOX_DECIMALS);
 
   QGridLayout *layout = new QGridLayout(general);
   layout->setMargin(0);
@@ -586,17 +583,14 @@ void MainWindow::setupPropertiesSidebar() {
   mSelectionPoint = new QWidget(this);
   mSelectionPoint->setVisible(false);
 
-  mPointX = new QDoubleSpinBox(mSelectionPoint);
-  mPointY = new QDoubleSpinBox(mSelectionPoint);
+  mPointX = new CustomSpinbox(mSelectionPoint);
+  mPointY = new CustomSpinbox(mSelectionPoint);
   mPointMove = new QPushButton(tr("Apply"), mSelectionPoint);
   QLabel *xLabel = new QLabel(tr("X"), mSelectionPoint);
   QLabel *yLabel = new QLabel(tr("Y"), mSelectionPoint);
   QPushButton *selectionDelete = new QPushButton(tr("Delete point/s"), mSelectionPoint);
   QPushButton *snapToGrid = new QPushButton(tr("Snap to grid"), mSelectionPoint);
   QShortcut *deleteShortcut = new QShortcut(Qt::Key_Delete, this);
-
-  mPointX->setDecimals(config::SPINBOX_DECIMALS);
-  mPointY->setDecimals(config::SPINBOX_DECIMALS);
 
   layout = new QGridLayout(mSelectionPoint);
   layout->setMargin(0);
