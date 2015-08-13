@@ -56,8 +56,8 @@ Mesh FlatMesh::createWall(const Point2& a, const Point2& b) const {
   double delta = m_plan->getTriangleSize();
 
   // z represents the height, and xy is the plane where the two points are
-  size_t nodes_z = (size_t) (m_plan->getHeight() / delta);
-  size_t nodes_xy = (size_t) (a.distance(b) / delta);
+  size_t nodes_z = lround(m_plan->getHeight() / delta);
+  size_t nodes_xy = lround(a.distance(b) / delta);
 
   // We use this to be able to iterate over the line that contains the two
   // points, even when it is not vertical or horizontal
@@ -105,8 +105,8 @@ Mesh FlatMesh::createCeiling(const Rectangle& box, std::vector<size_t>& boundary
   double delta = m_plan->getTriangleSize();
 
   Point2 rectOffset = box.getLowerLeft();
-  size_t height = (size_t) (box.getHeight() / delta);
-  size_t width = (size_t) (box.getWidth() / delta);
+  size_t height = lround(box.getHeight() / delta);
+  size_t width = lround(box.getWidth() / delta);
 
   // This will be used to save the index of the node located at the
   // last processed row. If its value is numeric_limits::max, it means that
@@ -232,8 +232,8 @@ void FlatMesh::merge(const std::vector<Mesh>& walls, const std::vector<size_t>& 
   std::vector<size_t> nodes_amount(walls.size());
   size_t acc_nodes = 0;
 
-  size_t nodes_z = (size_t) (m_plan->getHeight() / m_plan->getTriangleSize()) + 1;
-  size_t total_nodes = (size_t) m_plan->boundaryLength() * nodes_z;
+  size_t nodes_z = lround(m_plan->getHeight() / m_plan->getTriangleSize()) + 1;
+  size_t total_nodes = lround(m_plan->boundaryLength() * nodes_z);
 
   for (size_t i = 0; i < walls.size(); ++i) {
     Mesh wall = walls[i];
@@ -290,7 +290,7 @@ void FlatMesh::merge(const std::vector<Mesh>& walls, const std::vector<size_t>& 
         // it's only needed the column index and the index where the current
         // wall starts to figure out the global index of the corresponding top
         // and bottom nodes (ceiling and floor)
-        size_t wall_column_idx = (size_t) (a.distance(boundary_2d) / m_plan->getTriangleSize());
+        size_t wall_column_idx = lround(a.distance(boundary_2d) / m_plan->getTriangleSize());
         tr_floor[boundaries[j]] = (acc_nodes + wall_column_idx * nodes_z) % total_nodes;
       }
     }
@@ -319,7 +319,7 @@ void FlatMesh::merge(const std::vector<Mesh>& walls, const std::vector<size_t>& 
   std::vector<IndexTriangle> mesh_floor = floor.getMesh(floor_offset);
 
   #pragma omp parallel for schedule(guided) shared(mesh_ceil, mesh_floor)
-  for (int i = 0; i < mesh_ceil.size(); ++i) {
+  for (int i = 0; i < (int) mesh_ceil.size(); ++i) {
     processTriangle(boundaries, tr_floor, ceil_offset, nodes_z - 1, mesh_ceil[i]);
     processTriangle(boundaries, tr_floor, floor_offset, 0, mesh_floor[i]);
   }

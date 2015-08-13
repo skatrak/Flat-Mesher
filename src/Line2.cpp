@@ -17,7 +17,7 @@ Rectangle Line2::boundingBox() const {
 }
 
 double Line2::slope() const {
-  if (m_a.getX() == m_b.getX())
+  if (utils::areEqual(m_a.getX(), m_b.getX()))
     return std::numeric_limits<double>::max();
 
   return (m_b.getY() - m_a.getY()) / (m_b.getX() - m_a.getX());
@@ -33,11 +33,11 @@ bool Line2::valid() const {
 
 bool Line2::contains(const Point2& p) const {
   // Vertical line
-  if (m_a.getX() == m_b.getX()) {
+  if (utils::areEqual(m_a.getX(), m_b.getX())) {
     double min_y = std::fmin(m_a.getY(), m_b.getY());
     double max_y = std::fmax(m_a.getY(), m_b.getY());
 
-    return p.getX() == m_a.getX() && p.getY() >= min_y && p.getY() <= max_y;
+    return utils::areEqual(p.getX(), m_a.getX()) && p.getY() >= min_y && p.getY() <= max_y;
   }
 
   // General case (y = mx + b)

@@ -8,8 +8,8 @@ namespace flat { namespace utils {
 const double PI = 3.14159265358979323846;
 const double DOUBLE_EPSILON = 0.00001;
 
-inline bool isInteger(double n) {
-  return n == (int) n;
+inline bool isInteger(double n, double epsilon = DOUBLE_EPSILON) {
+  return fabs(round(n) - n) <= epsilon;
 }
 
 inline bool areEqual(double x, double y, double epsilon = DOUBLE_EPSILON) {
