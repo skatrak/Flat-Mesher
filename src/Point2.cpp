@@ -1,4 +1,6 @@
 #include "FlatMesher/Point2.h"
+
+#include "FlatMesher/Line2.h"
 #include "FlatMesher/Utils.h"
 
 #include <cmath>
@@ -10,6 +12,14 @@ double Point2::distance(const Point2& p) const {
   double y_diff = p.getY() - getY();
 
   return sqrt(x_diff * x_diff + y_diff * y_diff);
+}
+
+bool flat::Point2::isLeft(const Line2 & l) const {
+  return relativeToLine(l) > 0;
+}
+
+bool flat::Point2::isRight(const Line2 & l) const {
+  return relativeToLine(l) < 0;
 }
 
 Point2 Point2::operator+(const Point2& p) const {
@@ -53,4 +63,9 @@ double Point2::cross(const Point2& p1, const Point2& p2) {
 
 double Point2::dot(const Point2& p1, const Point2& p2) {
   return p1.getX() * p2.getX() + p1.getY() * p2.getY();
+}
+
+double flat::Point2::relativeToLine(const Line2 & l) const {
+  return ((l.getB().getX() - l.getA().getX()) * (getY() - l.getA().getY()) -
+          (getX() - l.getA().getX()) * (l.getB().getY() - l.getA().getY()));
 }

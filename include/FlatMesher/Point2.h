@@ -5,6 +5,8 @@
 
 namespace flat {
 
+class Line2;
+
 class Point2 {
 public:
   explicit Point2(double x = 0.0, double y = 0.0): m_x(x), m_y(y) {}
@@ -17,6 +19,8 @@ public:
   void setY(double y) { m_y = y; }
 
   double distance(const Point2& p) const;
+  bool isLeft(const Line2& l) const;
+  bool isRight(const Line2& l) const;
 
   Point2 operator+(const Point2& p) const;
   Point2 operator-(const Point2& p) const;
@@ -30,6 +34,9 @@ public:
 
   static double cross(const Point2& p1, const Point2& p2);
   static double dot(const Point2& p1, const Point2& p2);
+
+private:
+  double relativeToLine(const Line2& l) const;
 
 private:
   double m_x, m_y;
