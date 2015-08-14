@@ -16,6 +16,22 @@ inline bool areEqual(double x, double y, double epsilon = DOUBLE_EPSILON) {
   return std::abs(x - y) < epsilon;
 }
 
+inline bool greater(double x, double y, double epsilon = DOUBLE_EPSILON) {
+  return x > y && !areEqual(x, y, epsilon);
+}
+
+inline bool less(double x, double y, double epsilon = DOUBLE_EPSILON) {
+  return x < y && !areEqual(x, y, epsilon);
+}
+
+inline bool greaterEqual(double x, double y, double epsilon = DOUBLE_EPSILON) {
+  return x >= y || areEqual(x, y, epsilon);
+}
+
+inline bool lessEqual(double x, double y, double epsilon = DOUBLE_EPSILON) {
+  return x <= y || areEqual(x, y, epsilon);
+}
+
 }} // namespace flat::utils
 
 #endif // FLATMESHER_UTILS_H_

@@ -15,11 +15,11 @@ double Point2::distance(const Point2& p) const {
 }
 
 bool flat::Point2::isLeft(const Line2 & l) const {
-  return relativeToLine(l) > 0;
+  return utils::greater(relativeToLine(l), 0.0);
 }
 
 bool flat::Point2::isRight(const Line2 & l) const {
-  return relativeToLine(l) < 0;
+  return utils::less(relativeToLine(l), 0.0);
 }
 
 Point2 Point2::operator+(const Point2& p) const {

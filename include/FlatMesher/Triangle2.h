@@ -2,6 +2,7 @@
 #define FLATMESHER_TRIANGLE2_H_
 
 #include "Point2.h"
+#include "Utils.h"
 
 namespace flat {
 
@@ -23,8 +24,8 @@ public:
 
   bool colinear() const;
   bool valid() const { return !colinear(); }
-  bool ccw() const { return valid() && cross() > 0.0; }
-  bool cw() const { return valid() && cross() < 0.0; }
+  bool ccw() const { return valid() && utils::greater(cross(), 0.0); }
+  bool cw() const { return valid() && utils::less(cross(), 0.0); }
 
   Triangle2& operator=(const Triangle2&) = default;
 

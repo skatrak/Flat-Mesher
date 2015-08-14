@@ -32,19 +32,21 @@ bool Line2::valid() const {
 }
 
 bool Line2::contains(const Point2& p) const {
+  using namespace utils;
+
   // Vertical line
-  if (utils::areEqual(m_a.getX(), m_b.getX())) {
+  if (areEqual(m_a.getX(), m_b.getX())) {
     double min_y = std::fmin(m_a.getY(), m_b.getY());
     double max_y = std::fmax(m_a.getY(), m_b.getY());
 
-    return utils::areEqual(p.getX(), m_a.getX()) && p.getY() >= min_y && p.getY() <= max_y;
+    return areEqual(p.getX(), m_a.getX()) && greaterEqual(p.getY(), min_y) && lessEqual(p.getY(), max_y);
   }
 
   // General case (y = mx + b)
   double m = slope();
   double b = m_a.getY() - m * m_a.getX();
 
-  return utils::areEqual(p.getY(), m * p.getX() + b) && boundingBox().contains(p);
+  return areEqual(p.getY(), m * p.getX() + b) && boundingBox().contains(p);
 }
 
 bool Line2::intersects(const Line2& l) const {

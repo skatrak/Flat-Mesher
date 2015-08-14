@@ -41,6 +41,8 @@ double FloorPlan::boundaryLength() const {
 }
 
 bool FloorPlan::checkErrors(PlanErrorChecker* checker) const {
+  using namespace utils;
+
   if (!checker)
     return false;
 
@@ -52,12 +54,12 @@ bool FloorPlan::checkErrors(PlanErrorChecker* checker) const {
     return false;
 
   // Check if the triangle size is correct
-  if (m_triangle_sz <= 0.0 && checker->visitInvalidTriangleSize(m_triangle_sz))
+  if (lessEqual(m_triangle_sz, 0.0) && checker->visitInvalidTriangleSize(m_triangle_sz))
     return false;
 
   // Check if the height is divisible by the triangle size and if it is greater than 0
   double tmp = m_height / m_triangle_sz;
-  if ((!utils::isInteger(tmp) || tmp <= 0.0) && checker->visitInvalidHeight(m_height))
+  if ((!isInteger(tmp) || lessEqual(tmp, 0.0)) && checker->visitInvalidHeight(m_height))
     return false;
 
   checker->visitCheckSegmentsProperties();
@@ -71,13 +73,13 @@ bool FloorPlan::checkErrors(PlanErrorChecker* checker) const {
     double slope = ab.slope();
 
     // Check if the segment length is divisible by the triangle size
-    if (!utils::isInteger(ab.length() / m_triangle_sz) &&
+    if (!isInteger(ab.length() / m_triangle_sz) &&
         checker->visitInvalidSegmentLength(ab))
       return false;
 
     // Check if the slope is divisible by the triangle size or if it is vertical
     if (slope != std::numeric_limits<double>::max() &&
-        !utils::isInteger(slope / m_triangle_sz) &&
+        !isInteger(slope / m_triangle_sz) &&
         checker->visitInvalidSegmentSlope(ab))
       return false;
 
@@ -88,7 +90,7 @@ bool FloorPlan::checkErrors(PlanErrorChecker* checker) const {
   checker->visitCheckPointsOrder();
 
   // Points are not expressed in CCW order
-  if (total >= 0.0 && checker->visitNotCCWOrder())
+  if (greaterEqual(total, 0.0) && checker->visitNotCCWOrder())
     return false;
 
   checker->visitCheckRepeatedPoints();
@@ -122,6 +124,8 @@ bool FloorPlan::valid() const {
 }
 
 bool FloorPlan::pointInside(const Point2& p) const {
+  using namespace utils;
+
   int wn = 0;
   size_t sz_nodes = m_nodes.size();
 
@@ -129,14 +133,14 @@ bool FloorPlan::pointInside(const Point2& p) const {
     size_t next = (i+1) % sz_nodes;
     Line2 line(m_nodes[i], m_nodes[next]);
 
-    if (m_nodes[i].getY() <= p.getY()) {
-      if (m_nodes[next].getY() > p.getY()) {
+    if (lessEqual(m_nodes[i].getY(), p.getY())) {
+      if (greater(m_nodes[next].getY(), p.getY())) {
         if (p.isLeft(line))
           ++wn;
       }
     }
     else {
-      if (m_nodes[next].getY() <= p.getY()) {
+      if (lessEqual(m_nodes[next].getY(), p.getY())) {
         if (p.isRight(line))
           --wn;
       }

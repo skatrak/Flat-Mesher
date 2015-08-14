@@ -1,5 +1,7 @@
 #include "FlatMesher/Rectangle.h"
 
+#include "FlatMesher/Utils.h"
+
 using namespace flat;
 
 Rectangle::Rectangle(const Point2& tl, const Point2& lr):
@@ -12,22 +14,26 @@ Rectangle::Rectangle(const Point2& tl, double width, double height):
   m_tl(tl), m_lr(tl.getX() + width, tl.getY() - height) {}
 
 bool Rectangle::contains(const Point2& p) const {
-  return m_tl.getX() <= p.getX() &&
-         m_tl.getY() >= p.getY() &&
-         m_lr.getX() >= p.getX() &&
-         m_lr.getY() <= p.getY();
+  using namespace utils;
+
+  return lessEqual(m_tl.getX(), p.getX()) &&
+         greaterEqual(m_tl.getY(), p.getY()) &&
+         greaterEqual(m_lr.getX(), p.getX()) &&
+         lessEqual(m_lr.getY(), p.getY());
 }
 
 bool Rectangle::intersects(const Rectangle& r) const {
-  return m_tl.getX() <= r.m_lr.getX() &&
-         r.m_tl.getX() <= m_lr.getX() &&
-         m_tl.getY() > r.m_lr.getY() &&
-         r.m_tl.getY() > m_lr.getY();
+  using namespace utils;
+
+  return lessEqual(m_tl.getX(), r.m_lr.getX()) &&
+         lessEqual(r.m_tl.getX(), m_lr.getX()) &&
+         greater(m_tl.getY(), r.m_lr.getY()) &&
+         greater(r.m_tl.getY(), m_lr.getY());
 }
 
 bool Rectangle::valid() const {
-  return m_tl.getX() < m_lr.getX() &&
-         m_tl.getY() > m_lr.getY();
+  return utils::less(m_tl.getX(), m_lr.getX()) &&
+         utils::greater(m_tl.getY(), m_lr.getY());
 }
 
 void Rectangle::setTopLeft(const Point2& p) {
