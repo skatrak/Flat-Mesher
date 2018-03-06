@@ -12,8 +12,8 @@ TARGET = FlatMesherGUI
 TEMPLATE = app
 CONFIG += c++11
 
-SOURCES += src/Main.cpp\
-        src/MainWindow.cpp \
+SOURCES += src/Main.cpp \
+    src/MainWindow.cpp \
     src/CollapsibleWidget.cpp \
     src/FileManager.cpp \
     src/ViewportControls.cpp \
@@ -45,12 +45,12 @@ HEADERS  += include/MainWindow.h \
 
 QMAKE_CXXFLAGS += -fopenmp
 
-LIBS += -fopenmp -L"$$_PRO_FILE_PWD_/libs/" -lFlatMesher
+LIBS += -fopenmp -L"$$_PRO_FILE_PWD_/../library/build/" -L"$$_PRO_FILE_PWD_/libs/" -lFlatMesher
 
-INCLUDEPATH += include\
-        ../FlatMesher/include
+INCLUDEPATH += include \
+    ../library/include
 
-FORMS    += forms/MainWindow.ui \
+FORMS += forms/MainWindow.ui \
     forms/MeshAnalyzer.ui
 
 RESOURCES += \

@@ -3,4 +3,4 @@ Compilation steps:
   cmake ..
   make
 
-You will obtain a static library.
+You will obtain a static library, used by the GUI and CLI applications.
