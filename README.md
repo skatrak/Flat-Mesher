@@ -1,4 +1,4 @@
-= Flat Mesher =
+# Flat Mesher
 
 Automatic triangular mesh generation tool for flat buildings developed as part of the
 [PRACE Summer of HPC](https://summerofhpc.prace-ri.eu/) program in 2015, for the project named
